@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.Core;
 
@@ -18,6 +19,13 @@ public sealed class AppConfig
     public PrinterConfig Printer { get; set; } = new();
     public BackupConfig Backup { get; set; } = new();
     public LoggingConfig Logging { get; set; } = new();
+    public UiConfig Ui { get; set; } = new();
+}
+
+public sealed class UiConfig
+{
+    /// <summary>界面与日志语言：auto | zh-CN | zh-TW | en</summary>
+    public string Language { get; set; } = "auto";
 }
 
 public sealed class LoggingConfig
@@ -273,7 +281,7 @@ public static class ConfigStore
         error = "";
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
-            error = "配置文件不存在。";
+            error = Loc.T("Msg.Config.FileNotFound");
             return false;
         }
 
@@ -282,7 +290,7 @@ public static class ConfigStore
             var json = File.ReadAllText(path);
             if (string.IsNullOrWhiteSpace(json))
             {
-                error = "配置文件为空。";
+                error = Loc.T("Msg.Config.FileEmpty");
                 return false;
             }
 
@@ -293,49 +301,49 @@ public static class ConfigStore
             });
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
             {
-                error = "配置根节点必须是 JSON 对象。";
+                error = Loc.T("Msg.Config.RootNotObject");
                 return false;
             }
 
             config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
             if (config is null)
             {
-                error = "无法解析为有效配置。";
+                error = Loc.T("Msg.Config.ParseFailed");
                 return false;
             }
 
             // 基本合法性：数值范围
             if (config.Logging.RetentionDays is < 1 or > 3650)
             {
-                error = "日志保留天数必须在 1～3650 之间。";
+                error = Loc.T("Msg.Config.RetentionRange");
                 return false;
             }
             if (config.Leave.ReturnGraceSeconds < 1)
             {
-                error = "离开短时阻止归来秒数必须 ≥ 1。";
+                error = Loc.T("Msg.Config.GraceMin");
                 return false;
             }
             if (config.UrlLauncher is null || config.UrlLauncher.Tasks is null)
             {
-                error = "定时打开链接配置无效。";
+                error = Loc.T("Msg.Config.UrlLauncherInvalid");
                 return false;
             }
             foreach (var task in config.UrlLauncher.Tasks)
             {
                 if (task.IntervalDays < 1 || task.Hour is < 0 or > 23 || task.Minute is < 0 or > 59)
                 {
-                    error = $"打开链接任务「{task.Name}」的计划时间无效。";
+                    error = Loc.T("Msg.Config.UrlScheduleInvalid", task.Name);
                     return false;
                 }
                 if (task.CloseDelaySeconds < 0)
                 {
-                    error = $"打开链接任务「{task.Name}」的关闭等待时间不能小于 0。";
+                    error = Loc.T("Msg.Config.UrlCloseDelayInvalid", task.Name);
                     return false;
                 }
                 if (!Uri.TryCreate(task.Url, UriKind.Absolute, out var uri)
                     || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                 {
-                    error = $"打开链接任务「{task.Name}」的链接必须是有效的 HTTP/HTTPS 地址。";
+                    error = Loc.T("Msg.Config.UrlInvalid", task.Name);
                     return false;
                 }
             }
@@ -344,12 +352,12 @@ public static class ConfigStore
         }
         catch (JsonException ex)
         {
-            error = $"JSON 无效：{ex.Message}";
+            error = Loc.T("Msg.Config.JsonInvalid", ex.Message);
             return false;
         }
         catch (Exception ex)
         {
-            error = $"读取失败：{ex.Message}";
+            error = Loc.T("Msg.Config.ReadFailed", ex.Message);
             return false;
         }
     }

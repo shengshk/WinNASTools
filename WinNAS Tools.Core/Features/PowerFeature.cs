@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.Core.Features;
 
@@ -11,11 +12,11 @@ public sealed class PowerFeature : IWinNASToolsFeature
     private static readonly Guid HighPerformance = Guid.Parse("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
 
     private IFeatureContext? _ctx;
-    private string _currentLabel = "未知";
+    private string _currentLabel = Loc.T("Power.Unknown");
     private bool _inSaver;
 
     public string Id => "power";
-    public string DisplayName => "自动电源";
+    public string DisplayName => Loc.T("Feature.Power.Display");
     public bool IsEnabled { get; set; } = true;
 
     public void Initialize(IFeatureContext context)
@@ -49,7 +50,7 @@ public sealed class PowerFeature : IWinNASToolsFeature
             && cfg.SaverAfterSeconds > 0
             && idle >= cfg.SaverAfterSeconds)
         {
-            _ctx.MarkAway($"空闲 {idle:N0}s");
+            _ctx.MarkAway(Loc.T("Log.Reason.Idle", idle.ToString("N0")));
             EnterSaver();
         }
     }
@@ -60,7 +61,7 @@ public sealed class PowerFeature : IWinNASToolsFeature
         if (string.Equals(_ctx.Config.Power.Mode, "Manual", StringComparison.OrdinalIgnoreCase))
             return;
         if (_inSaver) return;
-        _ctx.MarkAway("一键离开");
+        _ctx.MarkAway(Loc.T("Log.Reason.LeaveNow"));
         EnterSaver(force: true);
     }
 
@@ -95,10 +96,10 @@ public sealed class PowerFeature : IWinNASToolsFeature
 
     private void EnterSaver(bool force = false)
     {
-        if (SetPlan("节能", PowerSaver))
+        if (SetPlan(Loc.T("Power.Saver"), PowerSaver))
         {
             _inSaver = true;
-            if (force) _ctx?.Log.Info("电源：一键离开 → 节能");
+            if (force) _ctx?.Log.Info(Loc.T("Log.Power.LeaveNowSaver"));
         }
     }
 
@@ -110,12 +111,12 @@ public sealed class PowerFeature : IWinNASToolsFeature
         // 以系统实际方案为准：只有已回到偏好才清离开节能标记。
         RefreshActivePlan();
         var mode = _ctx.Config.Power.Mode;
-        var preferred = string.Equals(mode, "Performance", StringComparison.OrdinalIgnoreCase) ? "性能"
-            : string.Equals(mode, "Balanced", StringComparison.OrdinalIgnoreCase) ? "平衡"
+        var preferred = string.Equals(mode, "Performance", StringComparison.OrdinalIgnoreCase) ? Loc.T("Power.Performance")
+            : string.Equals(mode, "Balanced", StringComparison.OrdinalIgnoreCase) ? Loc.T("Power.Balanced")
             : null;
         _inSaver = preferred is null || _currentLabel != preferred;
         if (_inSaver)
-            _ctx.Log.Warn($"电源：归来后仍为「{_currentLabel}」，期望「{preferred}」。");
+            _ctx.Log.Warn(Loc.T("Log.Power.ReturnMismatch", _currentLabel, preferred));
     }
 
     private void ApplyPreferredPlan()
@@ -123,9 +124,9 @@ public sealed class PowerFeature : IWinNASToolsFeature
         if (_ctx is null) return;
         var mode = _ctx.Config.Power.Mode;
         if (string.Equals(mode, "Performance", StringComparison.OrdinalIgnoreCase))
-            SetPlan("性能", HighPerformance);
+            SetPlan(Loc.T("Power.Performance"), HighPerformance);
         else if (string.Equals(mode, "Balanced", StringComparison.OrdinalIgnoreCase))
-            SetPlan("平衡", Balanced);
+            SetPlan(Loc.T("Power.Balanced"), Balanced);
     }
 
     private bool SetPlan(string label, Guid guid)
@@ -145,30 +146,30 @@ public sealed class PowerFeature : IWinNASToolsFeature
             using var p = Process.Start(psi);
             if (p is null)
             {
-                _ctx?.Log.Error("电源切换失败：无法启动 powercfg。");
+                _ctx?.Log.Error(Loc.T("Log.Power.SwitchNoPowercfg"));
                 return false;
             }
 
             if (!p.WaitForExit(3000))
             {
                 try { p.Kill(entireProcessTree: true); } catch { /* ignore */ }
-                _ctx?.Log.Error("电源切换失败：powercfg 超时。");
+                _ctx?.Log.Error(Loc.T("Log.Power.SwitchTimeout"));
                 return false;
             }
 
             if (p.ExitCode != 0)
             {
-                _ctx?.Log.Error($"电源切换失败：powercfg 退出码 {p.ExitCode}。");
+                _ctx?.Log.Error(Loc.T("Log.Power.SwitchExitCode", p.ExitCode));
                 return false;
             }
 
             _currentLabel = label;
-            _ctx?.Log.Info($"电源：→ {label}");
+            _ctx?.Log.Info(Loc.T("Log.Power.Switched", label));
             return true;
         }
         catch (Exception ex)
         {
-            _ctx?.Log.Error($"电源切换失败: {ex.Message}");
+            _ctx?.Log.Error(Loc.T("Log.Power.SwitchFailed", ex.Message));
             return false;
         }
     }
@@ -193,14 +194,14 @@ public sealed class PowerFeature : IWinNASToolsFeature
             var match = Regex.Match(output, @"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
             if (!match.Success) return;
             var g = Guid.Parse(match.Groups[1].Value);
-            _currentLabel = g == HighPerformance ? "性能"
-                : g == PowerSaver ? "节能"
-                : g == Balanced ? "平衡"
-                : "自定义";
+            _currentLabel = g == HighPerformance ? Loc.T("Power.Performance")
+                : g == PowerSaver ? Loc.T("Power.Saver")
+                : g == Balanced ? Loc.T("Power.Balanced")
+                : Loc.T("Power.Custom");
         }
         catch
         {
-            _currentLabel = "未知";
+            _currentLabel = Loc.T("Power.Unknown");
         }
     }
 }

@@ -9,6 +9,7 @@ using WinNASTools.Core;
 using WinNASTools.Core.Backup;
 using WinNASTools.Core.Features;
 using WinNASTools.Core.Hosting;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Services;
 
 namespace WinNASTools.App;
@@ -144,6 +145,7 @@ public partial class MainWindow : Window
         MainTabs.SelectionChanged += (_, _) => FitWindowToContent();
         Loaded += (_, _) =>
         {
+            UiLocalizer.Apply(this);
             ApplyTabEdgeMargins();
             FitWindowToContent();
             RefreshBackupProgressList();
@@ -219,9 +221,9 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _host.Log.Error($"打开日志文件失败：{ex.Message}");
+            _host.Log.Error(Loc.T("Log.Config.OpenLogFailed", ex.Message));
             System.Windows.MessageBox.Show(
-                $"无法打开日志文件：{ex.Message}",
+                Loc.T("Msg.OpenLogFailed", ex.Message),
                 AppBranding.Name,
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -659,7 +661,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                System.Windows.MessageBox.Show("快捷键无效。", AppBranding.Name,
+                System.Windows.MessageBox.Show(Loc.T("Msg.HotkeyInvalid"), AppBranding.Name,
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -776,7 +778,7 @@ public partial class MainWindow : Window
             _loading = true;
             TxtLockAfter.Text = adjusted.ToString();
             _loading = false;
-            _host.Log.Info($"自动锁屏时间已调整为 {adjusted} 秒（对齐其它离开任务）。");
+            _host.Log.Info(Loc.T("Log.Ui.LockSecondsAdjusted", adjusted));
         }
 
         _host.ReloadConfig(cfg);
@@ -1166,20 +1168,20 @@ public partial class MainWindow : Window
             || !int.TryParse(TxtHour.Text, out var hour) || hour is < 0 or > 23
             || !int.TryParse(TxtMinute.Text, out var minute) || minute is < 0 or > 59)
         {
-            System.Windows.MessageBox.Show("请填写有效的名称、打印机和计划时间。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show(Loc.T("Msg.PrinterValidation"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         var imagePath = NormalizeImagePath(TxtImagePath.Text);
         if (!string.IsNullOrEmpty(imagePath) && !System.IO.File.Exists(imagePath))
         {
-            System.Windows.MessageBox.Show("图片文件不存在。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show(Loc.T("Msg.ImageNotFound"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         CommitPrinterTask();
         if (!string.IsNullOrEmpty(_selectedTaskId))
             _printerDrafts.Remove(_selectedTaskId);
         SetPrinterDirty(false);
-        _host.Log.Info($"已保存打印机任务「{TxtPrinterName.Text.Trim()}」。");
+        _host.Log.Info(Loc.T("Log.Ui.PrinterTaskSaved", TxtPrinterName.Text.Trim()));
     }
 
     private void BtnPrinterAdd_Click(object sender, RoutedEventArgs e)
@@ -1344,7 +1346,7 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrWhiteSpace(task.PrinterName))
             {
-                System.Windows.MessageBox.Show("请先选择打印机。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(Loc.T("Msg.SelectPrinterFirst"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1358,12 +1360,12 @@ public partial class MainWindow : Window
             t.LastResult = "手动打印成功";
             _host.ReloadConfig(cfg);
             RefreshPrinterList();
-            _host.Log.Info($"打印机「{task.Name}」：手动打印已发送 → {task.PrinterName}");
+            _host.Log.Info(Loc.T("Log.Ui.PrinterManualSent", task.Name, task.PrinterName));
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(ex.Message, "打印失败", MessageBoxButton.OK, MessageBoxImage.Error);
-            _host.Log.Error($"手动打印失败: {ex.Message}");
+            System.Windows.MessageBox.Show(ex.Message, Loc.T("Msg.PrintFailed"), MessageBoxButton.OK, MessageBoxImage.Error);
+            _host.Log.Error(Loc.T("Log.Ui.PrinterManualFailed", ex.Message));
         }
     }
 
@@ -1371,8 +1373,8 @@ public partial class MainWindow : Window
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "选择打印图片",
-            Filter = "图片|*.tif;*.tiff;*.png;*.jpg;*.jpeg;*.bmp|所有文件|*.*"
+            Title = Loc.T("Dialog.PickImage.Title"),
+            Filter = Loc.T("Dialog.PickImage.Filter")
         };
         if (dlg.ShowDialog() != true) return;
         TxtImagePath.Text = dlg.FileName;
@@ -1559,7 +1561,7 @@ public partial class MainWindow : Window
     {
         error = "";
         if (string.IsNullOrWhiteSpace(TxtUrlName.Text))
-            return Fail("请输入任务名称。", out error);
+            return Fail(Loc.T("Msg.TaskNameRequired"), out error);
         if (!Uri.TryCreate(TxtUrlAddress.Text.Trim(), UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             return Fail("请输入有效的 HTTP/HTTPS 链接。", out error);
@@ -1622,7 +1624,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(_selectedUrlId))
             _urlDrafts.Remove(_selectedUrlId);
         SetUrlDirty(false);
-        _host.Log.Info($"已保存打开链接任务「{TxtUrlName.Text.Trim()}」。");
+        _host.Log.Info(Loc.T("Log.Ui.UrlTaskSaved", TxtUrlName.Text.Trim()));
     }
 
     private void BtnUrlAdd_Click(object sender, RoutedEventArgs e)
@@ -1685,8 +1687,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(ex.Message, "打开链接失败", MessageBoxButton.OK, MessageBoxImage.Error);
-            _host.Log.Error($"手动打开链接失败: {ex.Message}");
+            System.Windows.MessageBox.Show(ex.Message, Loc.T("Msg.OpenUrlFailed"), MessageBoxButton.OK, MessageBoxImage.Error);
+            _host.Log.Error(Loc.T("Log.Ui.UrlManualFailed", ex.Message));
         }
         finally
         {
@@ -1698,8 +1700,8 @@ public partial class MainWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "选择浏览器程序",
-            Filter = "浏览器程序|*.exe|所有文件|*.*"
+            Title = Loc.T("Dialog.PickBrowser.Title"),
+            Filter = Loc.T("Dialog.PickBrowser.Filter")
         };
         if (dialog.ShowDialog() != true) return;
         TxtUrlBrowserPath.Text = dialog.FileName;
@@ -2009,7 +2011,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _host.Log.Error($"刷新备份进度 UI 失败: {ex.Message}");
+            _host.Log.Error(Loc.T("Log.Ui.BackupProgressUiFailed", ex.Message));
         }
     }
 
@@ -2335,14 +2337,14 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(_selectedBackupId))
             _backupDrafts.Remove(_selectedBackupId);
         SetBackupDirty(false);
-        _host.Log.Info($"已保存备份任务「{TxtBackupName.Text.Trim()}」。");
+        _host.Log.Info(Loc.T("Log.Ui.BackupTaskSaved", TxtBackupName.Text.Trim()));
     }
 
     private bool ValidateBackupDraft(out string error)
     {
         error = "";
         if (string.IsNullOrWhiteSpace(TxtBackupName.Text))
-            return Fail("请输入任务名称。", out error);
+            return Fail(Loc.T("Msg.TaskNameRequired"), out error);
         if (!ValidateBackupEndpoint("源 A", CmbBackupSrcKind, CmbBackupSrcPath.Text, out error)
             || !ValidateBackupEndpoint("目标 B", CmbBackupDstKind, CmbBackupDstPath.Text, out error))
             return false;
@@ -2477,7 +2479,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(ex.Message, "备份失败", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show(ex.Message, Loc.T("Msg.BackupFailed"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -3213,7 +3215,7 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(_selectedAppSwitchId)) return;
         if (string.IsNullOrWhiteSpace(TxtAppName.Text))
         {
-            System.Windows.MessageBox.Show("请输入任务名称。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show(Loc.T("Msg.TaskNameRequired"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -3229,7 +3231,7 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrWhiteSpace(processName))
             {
-                System.Windows.MessageBox.Show("请从列表选择目标应用。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(Loc.T("Msg.SelectAppRequired"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
         }
@@ -3237,30 +3239,30 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrWhiteSpace(path))
             {
-                System.Windows.MessageBox.Show("请填写或浏览 exe 路径。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(Loc.T("Msg.AppPathRequired"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (!path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                System.Windows.MessageBox.Show("路径模式仅支持 .exe 文件。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(Loc.T("Msg.AppPathExeOnly"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (string.IsNullOrWhiteSpace(processName))
             {
-                System.Windows.MessageBox.Show("无法从路径识别应用名。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(Loc.T("Msg.AppNameFromPath"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
         }
 
         if (!int.TryParse(TxtAppStopAfter.Text, out var stopAfter) || stopAfter < 0)
         {
-            System.Windows.MessageBox.Show("空闲秒数必须为不小于 0 的整数。", AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show(Loc.T("Msg.IdleSecondsInvalid"), AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (!string.IsNullOrEmpty(path) && !File.Exists(path))
         {
             var go = System.Windows.MessageBox.Show(
-                "路径文件不存在，仍要保存吗？",
+                Loc.T("Msg.PathFileMissing"),
                 AppBranding.Name, MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (go != MessageBoxResult.Yes) return;
         }
@@ -3270,7 +3272,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(_selectedAppSwitchId))
             _appSwitchDrafts.Remove(_selectedAppSwitchId);
         SetAppSwitchDirty(false);
-        _host.Log.Info($"已保存停止应用任务「{TxtAppName.Text.Trim()}」。");
+        _host.Log.Info(Loc.T("Log.Ui.AppSwitchTaskSaved", TxtAppName.Text.Trim()));
     }
 
     private void BtnAppSwitchAdd_Click(object sender, RoutedEventArgs e)
@@ -3337,8 +3339,8 @@ public partial class MainWindow : Window
 
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "选择应用程序",
-            Filter = "程序 (*.exe)|*.exe"
+            Title = Loc.T("Dialog.PickApp.Title"),
+            Filter = Loc.T("Dialog.PickApp.Filter")
         };
         if (dlg.ShowDialog() != true) return;
 
@@ -3379,14 +3381,14 @@ public partial class MainWindow : Window
     {
         Dispatcher.InvokeAsync(() =>
         {
-            var run = _host.IsRunning ? "监控中" : "已停止";
+            var run = _host.IsRunning ? Loc.T("Status.Monitoring") : Loc.T("Status.Stopped");
             var phase = _host.IsWorkstationLocked
-                ? " | 锁屏离开"
-                : _host.IsAway ? " | 离开中" : "";
-            var skip = _host.ShouldSkipAutoIdleTriggers ? " | 豁免场景" : "";
-            var grace = _host.IsUserActivitySuppressed ? " | 短时阻止归来中" : "";
-            TxtStatus.Text = $"状态：{run}{phase} | 空闲 {(int)_host.IdleSeconds}s{skip}{grace}";
-            TxtStatusHotkey.Text = $"{_hotkeyDisplay} 离开";
+                ? Loc.T("Status.LockedAway")
+                : _host.IsAway ? Loc.T("Status.Away") : "";
+            var skip = _host.ShouldSkipAutoIdleTriggers ? Loc.T("Status.Exempt") : "";
+            var grace = _host.IsUserActivitySuppressed ? Loc.T("Status.GraceActive") : "";
+            TxtStatus.Text = Loc.T("Status.Full", run, phase, (int)_host.IdleSeconds, skip, grace);
+            TxtStatusHotkey.Text = Loc.T("Status.HotkeyLeave", _hotkeyDisplay);
         });
     }
 

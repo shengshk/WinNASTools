@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using WinNASTools.Core;
 using WinNASTools.Core.Hosting;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.App;
 
@@ -34,7 +35,7 @@ public partial class App : System.Windows.Application
                 if (_uiExceptionLogCount < 3)
                 {
                     _uiExceptionLogCount++;
-                    _host?.Log.Error($"未处理 UI 异常: {args.Exception.Message}");
+                    _host?.Log.Error(Loc.T("Log.Crash.UiException", args.Exception.Message));
                     var path = Path.Combine(AppPaths.DataDirectory, "crash.log");
                     if (!File.Exists(path) || new FileInfo(path).Length < 2_000_000)
                     {
@@ -52,7 +53,7 @@ public partial class App : System.Windows.Application
             try
             {
                 var ex = args.ExceptionObject as Exception;
-                _host?.Log.Error($"未处理异常: {ex?.Message}");
+                _host?.Log.Error(Loc.T("Log.Crash.Unhandled", ex?.Message ?? ""));
                 var path = Path.Combine(AppPaths.DataDirectory, "crash.log");
                 if (!File.Exists(path) || new FileInfo(path).Length < 2_000_000)
                 {
@@ -67,7 +68,7 @@ public partial class App : System.Windows.Application
         {
             try
             {
-                _host?.Log.Error($"未观察任务异常: {args.Exception.Message}");
+                _host?.Log.Error(Loc.T("Log.Crash.UnobservedTask", args.Exception.Message));
                 var path = Path.Combine(AppPaths.DataDirectory, "crash.log");
                 if (!File.Exists(path) || new FileInfo(path).Length < 2_000_000)
                 {
@@ -82,7 +83,10 @@ public partial class App : System.Windows.Application
 
         base.OnStartup(e);
 
-        _host = new AppHost();
+        var earlyConfig = ConfigStore.Load();
+        Loc.Initialize(AppLanguageHelper.ParseConfig(earlyConfig.Ui.Language));
+
+        _host = new AppHost(earlyConfig);
         _host.RegisterDefaults();
         _host.SetUiLogSink(line =>
         {
@@ -99,7 +103,7 @@ public partial class App : System.Windows.Application
             _ = Task.Run(() =>
             {
                 try { _host?.LeaveNow(); }
-                catch (Exception ex) { _host?.Log.Error($"一键离开失败: {ex.Message}"); }
+                catch (Exception ex) { _host?.Log.Error(Loc.T("Log.LeaveNow.Failed", ex.Message)); }
             });
         }
 
@@ -129,7 +133,7 @@ public partial class App : System.Windows.Application
             if (!_hotkey.TryRebind(dlg.HotkeySpec))
             {
                 System.Windows.MessageBox.Show(
-                    $"热键「{dlg.HotkeySpec}」注册失败（可能被占用），已保持原快捷键。",
+                    Loc.T("Msg.HotkeyRegisterFailed", dlg.HotkeySpec),
                     AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 _hotkey.TryRebind(_host.Config.Leave.Hotkey);
                 return;
@@ -138,7 +142,7 @@ public partial class App : System.Windows.Application
             var cfg = CloneConfig(_host.Config);
             cfg.Leave.Hotkey = dlg.HotkeySpec;
             _host.ReloadConfig(cfg);
-            _host.Log.Info($"离开热键已改为：{_hotkey.DisplayText}");
+            _host.Log.Info(Loc.T("Log.Hotkey.LeaveChanged", _hotkey.DisplayText));
             _main?.RefreshHotkeyStatus(_hotkey.DisplayText);
         });
 
@@ -160,19 +164,19 @@ public partial class App : System.Windows.Application
                 ConfigStore.Save(_host.Config);
                 using var dlg = new SaveFileDialog
                 {
-                    Title = "导出配置",
-                    Filter = "WinNAS Tools 配置|*.json|所有文件|*.*",
+                    Title = Loc.T("Dialog.ExportConfig.Title"),
+                    Filter = Loc.T("Dialog.FileFilter.Config"),
                     FileName = "WinNasToolsConfig.json",
                     OverwritePrompt = true
                 };
                 if (dlg.ShowDialog() != DialogResult.OK) return;
                 File.Copy(ConfigStore.ConfigPath, dlg.FileName, overwrite: true);
-                _host.Log.Info($"配置已导出：{dlg.FileName}");
+                _host.Log.Info(Loc.T("Log.Config.Exported", dlg.FileName));
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show(
-                    $"导出失败：{ex.Message}",
+                    Loc.T("Msg.ExportFailed", ex.Message),
                     AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         });
@@ -183,8 +187,8 @@ public partial class App : System.Windows.Application
 
             using var dlg = new OpenFileDialog
             {
-                Title = "导入配置",
-                Filter = "WinNAS Tools 配置|*.json|所有文件|*.*",
+                Title = Loc.T("Dialog.ImportConfig.Title"),
+                Filter = Loc.T("Dialog.FileFilter.Config"),
                 CheckFileExists = true
             };
             if (dlg.ShowDialog() != DialogResult.OK) return;
@@ -192,35 +196,35 @@ public partial class App : System.Windows.Application
             if (!ConfigStore.TryLoadFromFile(dlg.FileName, out var cfg, out var error) || cfg is null)
             {
                 System.Windows.MessageBox.Show(
-                    $"配置不合法，已取消导入。\n\n{error}",
+                    Loc.T("Msg.ImportInvalid", error),
                     AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             var confirm = System.Windows.MessageBox.Show(
-                "导入将覆盖当前配置并重启程序，是否继续？",
+                Loc.T("Msg.ImportConfirm"),
                 AppBranding.Name, MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 
             try
             {
                 ConfigStore.ReplaceWith(cfg);
-                _host.Log.Info($"配置已导入：{dlg.FileName}，即将重启。");
+                _host.Log.Info(Loc.T("Log.Config.Imported", dlg.FileName));
                 RestartApplication();
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show(
-                    $"导入失败：{ex.Message}",
+                    Loc.T("Msg.ImportFailed", ex.Message),
                     AppBranding.Name, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         });
 
         _hotkey = new HotkeyService(LeaveNow, _host.Config.Leave.Hotkey);
         if (_hotkey.IsRegistered)
-            _host.Log.Info($"热键已注册：{_hotkey.DisplayText} → 一键离开");
+            _host.Log.Info(Loc.T("Log.Hotkey.Registered", _hotkey.DisplayText));
         else
-            _host.Log.Warn($"热键注册失败（可能被占用）：{_host.Config.Leave.Hotkey}");
+            _host.Log.Warn(Loc.T("Log.Hotkey.RegisterFailed", _host.Config.Leave.Hotkey));
 
         _tray = new TrayService(
             _host,
@@ -248,6 +252,15 @@ public partial class App : System.Windows.Application
             exportConfig: ExportConfig,
             importConfig: ImportConfig,
             refreshMainUi: () => Current.Dispatcher.Invoke(() => _main?.RefreshFromHost()),
+            changeLanguageRestart: code => Current.Dispatcher.Invoke(() =>
+            {
+                if (_host is null) return;
+                var cfg = CloneConfig(_host.Config);
+                cfg.Ui.Language = code;
+                ConfigStore.Save(cfg);
+                _host.Log.Info(Loc.T("Log.Restart.LanguageChanged", code));
+                RestartApplication();
+            }),
             exePath: () => Environment.ProcessPath
                 ?? Process.GetCurrentProcess().MainModule?.FileName);
 

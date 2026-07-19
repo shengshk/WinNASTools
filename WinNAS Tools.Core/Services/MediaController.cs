@@ -1,3 +1,4 @@
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Native;
 
 namespace WinNASTools.Core.Services;
@@ -28,24 +29,24 @@ public static class MediaController
         var playing = AudioSessionProbe.IsAnyAudioPlaying();
         if (playing != true)
         {
-            log?.Invoke(playing is null ? "探测失败，保守跳过" : "当前无音频播放，跳过");
+            log?.Invoke(playing is null ? Loc.T("Log.Media.ProbeFailedSkip") : Loc.T("Log.Media.NoPlaybackSkip"));
             return StopMethod.None;
         }
 
         // 再确认确实在出声，避免“会话 Active 但已静音/无声”误动作。
         if (SystemAudioControl.IsOutputAudible() == false)
         {
-            log?.Invoke("有会话但无声，跳过");
+            log?.Invoke(Loc.T("Log.Media.SessionSilentSkip"));
             return StopMethod.None;
         }
 
-        if (TryAction("系统 Pause", NativeMethods.MediaPause, log))
+        if (TryAction(Loc.T("Log.Media.Label.SystemPause"), NativeMethods.MediaPause, log))
             return StopMethod.Pause;
 
-        if (TryAction("系统 Stop", NativeMethods.MediaStop, log))
+        if (TryAction(Loc.T("Log.Media.Label.SystemStop"), NativeMethods.MediaStop, log))
             return StopMethod.Stop;
 
-        if (TryAction("多媒体播放/暂停键", NativeMethods.SendMediaPlayPauseKey, log))
+        if (TryAction(Loc.T("Log.Media.Label.MediaKey"), NativeMethods.SendMediaPlayPauseKey, log))
             return StopMethod.MediaKey;
 
         var keys = NormalizeHotkeys(playPauseHotkeys);
@@ -59,7 +60,7 @@ public static class MediaController
                 1 => StopMethod.Hotkey2,
                 _ => StopMethod.Hotkey3
             };
-            var label = $"快捷键{i + 1}（{spec}）";
+            var label = Loc.T("Log.Media.Label.Hotkey", i + 1, spec);
             if (TryAction(label, () => HotkeySpec.TrySend(spec), log))
                 return method;
         }
@@ -68,17 +69,17 @@ public static class MediaController
         var wasMuted = SystemAudioControl.GetMute();
         if (wasMuted == true)
         {
-            log?.Invoke("仍有声，但系统已静音，放弃");
+            log?.Invoke(Loc.T("Log.Media.AlreadyMutedGiveUp"));
             return StopMethod.None;
         }
 
         if (SystemAudioControl.TrySetMute(true))
         {
-            log?.Invoke("前序方式无效，已系统静音兜底");
+            log?.Invoke(Loc.T("Log.Media.MuteFallback"));
             return StopMethod.Mute;
         }
 
-        log?.Invoke("全部方式失败（含静音）");
+        log?.Invoke(Loc.T("Log.Media.AllFailed"));
         return StopMethod.None;
     }
 
@@ -92,12 +93,12 @@ public static class MediaController
             case StopMethod.Pause:
             case StopMethod.Stop:
                 NativeMethods.MediaPlay();
-                log?.Invoke($"已用系统 Play 恢复（离开时为 {MethodLabel(method)}）");
+                log?.Invoke(Loc.T("Log.Media.ResumePlay", MethodLabel(method)));
                 break;
 
             case StopMethod.MediaKey:
                 NativeMethods.SendMediaPlayPauseKey();
-                log?.Invoke("已用多媒体播放/暂停键恢复");
+                log?.Invoke(Loc.T("Log.Media.ResumeMediaKey"));
                 break;
 
             case StopMethod.Hotkey1:
@@ -109,18 +110,18 @@ public static class MediaController
                 var spec = index >= 0 && index < keys.Count ? keys[index] : null;
                 if (string.IsNullOrWhiteSpace(spec) || !HotkeySpec.TrySend(spec))
                 {
-                    log?.Invoke($"快捷键恢复失败，已放弃（{spec ?? "未配置"}）");
+                    log?.Invoke(Loc.T("Log.Media.HotkeyResumeFailed", spec ?? Loc.T("Log.Media.NotConfigured")));
                     return;
                 }
-                log?.Invoke($"已用快捷键{index + 1}（{spec}）恢复");
+                log?.Invoke(Loc.T("Log.Media.HotkeyResumed", index + 1, spec));
                 break;
             }
 
             case StopMethod.Mute:
                 if (SystemAudioControl.TrySetMute(false))
-                    log?.Invoke("已取消系统静音（离开时静音兜底；不强制恢复播放）");
+                    log?.Invoke(Loc.T("Log.Media.UnmuteOk"));
                 else
-                    log?.Invoke("取消系统静音失败，已放弃");
+                    log?.Invoke(Loc.T("Log.Media.UnmuteFailed"));
                 break;
         }
     }
@@ -129,12 +130,12 @@ public static class MediaController
     {
         StopMethod.Pause => "Pause",
         StopMethod.Stop => "Stop",
-        StopMethod.MediaKey => "多媒体键",
-        StopMethod.Hotkey1 => "快捷键1",
-        StopMethod.Hotkey2 => "快捷键2",
-        StopMethod.Hotkey3 => "快捷键3",
-        StopMethod.Mute => "系统静音",
-        _ => "无"
+        StopMethod.MediaKey => Loc.T("Log.Media.Method.MediaKey"),
+        StopMethod.Hotkey1 => Loc.T("Log.Media.Method.Hotkey1"),
+        StopMethod.Hotkey2 => Loc.T("Log.Media.Method.Hotkey2"),
+        StopMethod.Hotkey3 => Loc.T("Log.Media.Method.Hotkey3"),
+        StopMethod.Mute => Loc.T("Log.Media.Method.Mute"),
+        _ => Loc.T("Log.Media.Method.None")
     };
 
     private static bool TryAction(string label, Action action, Action<string>? log)
@@ -142,7 +143,7 @@ public static class MediaController
         try { action(); }
         catch (Exception ex)
         {
-            log?.Invoke($"{label} 发送失败：{ex.Message}");
+            log?.Invoke(Loc.T("Log.Media.ActionSendFailed", label, ex.Message));
             return false;
         }
 
@@ -150,18 +151,18 @@ public static class MediaController
         var audible = SystemAudioControl.IsOutputAudible();
         if (audible == false)
         {
-            log?.Invoke($"{label} 生效");
+            log?.Invoke(Loc.T("Log.Media.ActionEffective", label));
             return true;
         }
 
         // 峰值探测失败时，再用会话状态兜一次（偏保守：仍有声则继续下一招）
         if (audible is null && AudioSessionProbe.IsAnyAudioPlaying() == false)
         {
-            log?.Invoke($"{label} 生效（峰值不可用，按会话判断）");
+            log?.Invoke(Loc.T("Log.Media.ActionEffectiveSession", label));
             return true;
         }
 
-        log?.Invoke($"{label} 无效，继续");
+        log?.Invoke(Loc.T("Log.Media.ActionIneffective", label));
         return false;
     }
 
@@ -171,13 +172,13 @@ public static class MediaController
         try { ok = action(); }
         catch (Exception ex)
         {
-            log?.Invoke($"{label} 发送失败：{ex.Message}");
+            log?.Invoke(Loc.T("Log.Media.ActionSendFailed", label, ex.Message));
             return false;
         }
 
         if (!ok)
         {
-            log?.Invoke($"{label} 发送失败，继续");
+            log?.Invoke(Loc.T("Log.Media.ActionSendFailedContinue", label));
             return false;
         }
 
@@ -185,17 +186,17 @@ public static class MediaController
         var audible = SystemAudioControl.IsOutputAudible();
         if (audible == false)
         {
-            log?.Invoke($"{label} 生效");
+            log?.Invoke(Loc.T("Log.Media.ActionEffective", label));
             return true;
         }
 
         if (audible is null && AudioSessionProbe.IsAnyAudioPlaying() == false)
         {
-            log?.Invoke($"{label} 生效（峰值不可用，按会话判断）");
+            log?.Invoke(Loc.T("Log.Media.ActionEffectiveSession", label));
             return true;
         }
 
-        log?.Invoke($"{label} 无效，继续");
+        log?.Invoke(Loc.T("Log.Media.ActionIneffective", label));
         return false;
     }
 

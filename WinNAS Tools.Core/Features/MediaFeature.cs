@@ -1,4 +1,5 @@
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Services;
 
 namespace WinNASTools.Core.Features;
@@ -14,7 +15,7 @@ public sealed class MediaFeature : IWinNASToolsFeature
     private bool _stopEvaluated;
 
     public string Id => "media";
-    public string DisplayName => "自动音乐";
+    public string DisplayName => Loc.T("Feature.Media.Display");
     public bool IsEnabled { get; set; } = true;
 
     public void Initialize(IFeatureContext context) => _ctx = context;
@@ -33,8 +34,9 @@ public sealed class MediaFeature : IWinNASToolsFeature
             && cfg.StopAfterSeconds > 0
             && idle >= cfg.StopAfterSeconds)
         {
-            _ctx.MarkAway($"空闲 {idle:N0}s");
-            EvaluateStop($"空闲 {idle:N0}s");
+            var reason = Loc.T("Log.Reason.Idle", idle.ToString("N0"));
+            _ctx.MarkAway(reason);
+            EvaluateStop(reason);
             return;
         }
 
@@ -51,8 +53,9 @@ public sealed class MediaFeature : IWinNASToolsFeature
     {
         if (_ctx is null || !IsEnabled) return;
         if (_stopEvaluated) return;
-        _ctx.MarkAway("一键离开");
-        EvaluateStop("一键离开");
+        var reason = Loc.T("Log.Reason.LeaveNow");
+        _ctx.MarkAway(reason);
+        EvaluateStop(reason);
     }
 
     public void OnStateChanged(AppState from, AppState to)
@@ -77,13 +80,13 @@ public sealed class MediaFeature : IWinNASToolsFeature
 
         var method = MediaController.TryStop(
             _ctx?.Config.Media.PlayPauseHotkeys,
-            msg => _ctx?.Log.Info($"音乐：{msg}（{reason}）。"));
+            msg => _ctx?.Log.Info(Loc.T("Log.Media.WithReason", msg, reason)));
 
         _stopMethod = method;
         if (method == MediaController.StopMethod.None)
             return;
 
-        _ctx?.Log.Info($"音乐：已停止，方式={MediaController.MethodLabel(method)}（{reason}）。");
+        _ctx?.Log.Info(Loc.T("Log.Media.Stopped", MediaController.MethodLabel(method), reason));
     }
 
     private void DoResume()
@@ -93,6 +96,6 @@ public sealed class MediaFeature : IWinNASToolsFeature
         MediaController.TryResume(
             method,
             _ctx?.Config.Media.PlayPauseHotkeys,
-            msg => _ctx?.Log.Info($"音乐：{msg}。"));
+            msg => _ctx?.Log.Info(Loc.T("Log.Media.Message", msg)));
     }
 }

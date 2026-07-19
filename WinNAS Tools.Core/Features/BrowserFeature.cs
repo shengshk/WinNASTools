@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Native;
 
 namespace WinNASTools.Core.Features;
@@ -13,7 +14,7 @@ public sealed class BrowserFeature : IWinNASToolsFeature
     private int _closing;
 
     public string Id => "browser";
-    public string DisplayName => "自动关闭浏览器";
+    public string DisplayName => Loc.T("Feature.Browser");
     public bool IsEnabled { get; set; }
 
     public void Initialize(IFeatureContext context) => _ctx = context;
@@ -32,8 +33,9 @@ public sealed class BrowserFeature : IWinNASToolsFeature
             && cfg.CloseAfterSeconds > 0
             && idle >= cfg.CloseAfterSeconds)
         {
-            _ctx.MarkAway($"空闲 {idle:N0}s");
-            DoClose($"空闲 {idle:N0}s");
+            var reason = Loc.T("Log.Reason.Idle", idle.ToString("N0"));
+            _ctx.MarkAway(reason);
+            DoClose(reason);
             return;
         }
 
@@ -46,8 +48,9 @@ public sealed class BrowserFeature : IWinNASToolsFeature
     {
         if (_ctx is null || !IsEnabled) return;
         if (_closedByUs) return;
-        _ctx.MarkAway("一键离开");
-        DoClose("一键离开");
+        var reason = Loc.T("Log.Reason.LeaveNow");
+        _ctx.MarkAway(reason);
+        DoClose(reason);
     }
 
     public void OnStateChanged(AppState from, AppState to)
@@ -68,7 +71,7 @@ public sealed class BrowserFeature : IWinNASToolsFeature
         var names = ParseNames(_ctx.Config.Browser.ProcessNames);
         if (names.Count == 0)
         {
-            _ctx.Log.Warn("浏览器：进程列表为空，跳过。");
+            _ctx.Log.Warn(Loc.T("Log.Browser.ProcessListEmpty"));
             return;
         }
 
@@ -85,13 +88,13 @@ public sealed class BrowserFeature : IWinNASToolsFeature
             }
             catch (Exception ex)
             {
-                _ctx.Log.Error($"浏览器：结束 {name} 失败: {ex.Message}");
+                _ctx.Log.Error(Loc.T("Log.Browser.KillFailed", name, ex.Message));
             }
         }
 
         if (processes.Count == 0)
         {
-            _ctx.Log.Info($"浏览器：未发现匹配进程（{reason}）。");
+            _ctx.Log.Info(Loc.T("Log.Browser.NoMatch", reason));
             return;
         }
 
@@ -130,7 +133,7 @@ public sealed class BrowserFeature : IWinNASToolsFeature
             }
             catch (Exception ex)
             {
-                _ctx.Log.Warn($"浏览器：强制结束 PID {process.Id} 失败: {ex.Message}");
+                _ctx.Log.Warn(Loc.T("Log.Browser.ForceKillFailed", process.Id, ex.Message));
             }
             finally
             {
@@ -140,8 +143,7 @@ public sealed class BrowserFeature : IWinNASToolsFeature
 
         if (graceful > 0 || forced > 0)
             _closedByUs = true;
-        _ctx.Log.Info(
-            $"浏览器：正常关闭 {graceful} 个进程，超时强制结束 {forced} 个进程（{reason}）。");
+        _ctx.Log.Info(Loc.T("Log.Browser.ClosedSummary", graceful, forced, reason));
         }
         finally
         {

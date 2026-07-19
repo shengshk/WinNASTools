@@ -1,5 +1,6 @@
 using System.Windows;
 using WinNASTools.Core;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.App;
 
@@ -20,7 +21,7 @@ public partial class LogRetentionWindow : Window
     {
         if (!int.TryParse(TxtDays.Text.Trim(), out var days) || days is < 1 or > 3650)
         {
-            System.Windows.MessageBox.Show("请输入 1–3650 之间的整数。", AppBranding.Name,
+            System.Windows.MessageBox.Show(Loc.T("Msg.LogRetentionInvalid"), AppBranding.Name,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             TxtDays.Focus();
             TxtDays.SelectAll();

@@ -2,6 +2,7 @@ using WinNASTools.Core;
 using WinNASTools.Core.Contracts;
 using WinNASTools.Core.Engine;
 using WinNASTools.Core.Features;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.Core.Hosting;
 
@@ -93,7 +94,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
             fl.SetRetentionDays(Config.Logging.RetentionDays);
         else
             _log = new FileLogger(ConfigStore.LogPath, line => LogLine?.Invoke(line), Config.Logging.RetentionDays);
-        Log.Info($"日志保留天数已设为 {Config.Logging.RetentionDays} 天。");
+        Log.Info(Loc.T("Log.Config.LogRetentionSet", Config.Logging.RetentionDays));
     }
 
     public void RegisterDefaults()
@@ -113,7 +114,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
     public void Register(IWinNASToolsFeature feature)
     {
         if (_features.Any(f => f.Id == feature.Id))
-            throw new InvalidOperationException($"功能已注册: {feature.Id}");
+            throw new InvalidOperationException($"Feature already registered: {feature.Id}");
         _features.Add(feature);
     }
 
@@ -132,11 +133,11 @@ public sealed class AppHost : IDisposable, IFeatureContext
         foreach (var feature in _features)
         {
             try { feature.Initialize(this); }
-            catch (Exception ex) { Log.Error($"初始化 {feature.DisplayName} 失败: {ex.Message}"); }
+            catch (Exception ex) { Log.Error(Loc.T("Log.Feature.InitFailed", feature.DisplayName, ex.Message)); }
         }
 
         _engine.Start();
-        Log.Info($"{AppBranding.Name} 监控已启动。");
+        Log.Info(Loc.T("Log.Monitor.Started", AppBranding.Name));
         StatusChanged?.Invoke();
     }
 
@@ -168,7 +169,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
             _returnActivityStreak = 0;
         }
 
-        Log.Info($"{AppBranding.Name} 监控已停止。");
+        Log.Info(Loc.T("Log.Monitor.Stopped", AppBranding.Name));
         StatusChanged?.Invoke();
     }
 
@@ -186,11 +187,11 @@ public sealed class AppHost : IDisposable, IFeatureContext
         {
             var graceSec = Math.Max(1, Config.Leave.ReturnGraceSeconds);
             SuppressUserActivity(TimeSpan.FromSeconds(graceSec));
-            Log.Info($"离开：进入离开态（{reason}），短时阻止归来 {graceSec}s。");
+            Log.Info(Loc.T("Log.Leave.EnterAwayWithGrace", reason, graceSec));
         }
         else
         {
-            Log.Info($"离开：进入离开态（{reason}）。");
+            Log.Info(Loc.T("Log.Leave.EnterAway", reason));
         }
 
         StatusChanged?.Invoke();
@@ -201,7 +202,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
     {
         if (!IsRunning)
         {
-            Log.Warn("一键离开：监控未启动。");
+            Log.Warn(Loc.T("Log.LeaveNow.NotRunning"));
             return;
         }
 
@@ -211,19 +212,19 @@ public sealed class AppHost : IDisposable, IFeatureContext
             if (!(Config.Modules.LeaveGrace && Config.Leave.Enabled))
             {
                 SuppressUserActivity(TimeSpan.FromSeconds(2));
-                Log.Info("一键离开：跳过等待（短时阻止归来未启用，已做最短输入保护）。");
+                Log.Info(Loc.T("Log.LeaveNow.SkipWaitProtected"));
             }
             else
             {
-                Log.Info("一键离开：跳过等待。");
+                Log.Info(Loc.T("Log.LeaveNow.SkipWait"));
             }
 
-            MarkAway("一键离开");
+            MarkAway(Loc.T("Log.Reason.LeaveNow"));
             foreach (var feature in _features)
             {
                 if (!feature.IsEnabled) continue;
                 try { feature.ForceTrigger(); }
-                catch (Exception ex) { Log.Error($"{feature.DisplayName} 一键离开失败: {ex.Message}"); }
+                catch (Exception ex) { Log.Error(Loc.T("Log.LeaveNow.FeatureFailed", feature.DisplayName, ex.Message)); }
             }
 
             StatusChanged?.Invoke();
@@ -279,7 +280,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
         }
 
         StatusChanged?.Invoke();
-        Log.Info("配置已保存。");
+        Log.Info(Loc.T("Log.Config.Saved"));
     }
 
     public void RequestState(AppState state) => _engine?.RequestState(state);
@@ -321,10 +322,10 @@ public sealed class AppHost : IDisposable, IFeatureContext
 
         if (needLeave)
         {
-            Log.Info("离开：检测到锁屏，进入离开态。");
+            Log.Info(Loc.T("Log.Leave.LockDetected"));
             if (Config.Leave.RunLeaveOnManualLock && IsRunning)
             {
-                Log.Info("离开：手动锁屏，执行一轮离开任务。");
+                Log.Info(Loc.T("Log.Leave.ManualLockRun"));
                 // SystemEvents 常落在 UI 线程，离开任务必须丢到后台。
                 _ = Task.Run(() =>
                 {
@@ -339,7 +340,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
                                     if (!feature.IsEnabled) continue;
                                     if (feature.Id == "lock") continue;
                                     try { feature.ForceTrigger(); }
-                                    catch (Exception ex) { Log.Error($"{feature.DisplayName} 手动锁屏离开失败: {ex.Message}"); }
+                                    catch (Exception ex) { Log.Error(Loc.T("Log.Leave.ManualLockFeatureFailed", feature.DisplayName, ex.Message)); }
                                 }
                             });
                         }
@@ -350,13 +351,13 @@ public sealed class AppHost : IDisposable, IFeatureContext
                                 if (!feature.IsEnabled) continue;
                                 if (feature.Id == "lock") continue;
                                 try { feature.ForceTrigger(); }
-                                catch (Exception ex) { Log.Error($"{feature.DisplayName} 手动锁屏离开失败: {ex.Message}"); }
+                                catch (Exception ex) { Log.Error(Loc.T("Log.Leave.ManualLockFeatureFailed", feature.DisplayName, ex.Message)); }
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Log.Error($"手动锁屏离开失败: {ex.Message}");
+                        Log.Error(Loc.T("Log.Leave.ManualLockFailed", ex.Message));
                     }
                     finally
                     {
@@ -381,7 +382,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
         if (_features.FirstOrDefault(f => f is LockFeature) is LockFeature lockFeature)
             lockFeature.OnUnlocked();
 
-        Log.Info("归来：已解锁。");
+        Log.Info(Loc.T("Log.Return.Unlocked"));
         // 解锁回调也可能在 UI 线程：归来（电源切换等）放到后台，避免界面未响应。
         _ = Task.Run(() =>
         {
@@ -394,7 +395,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
             }
             catch (Exception ex)
             {
-                Log.Error($"解锁归来失败: {ex.Message}");
+                Log.Error(Loc.T("Log.Return.UnlockFailed", ex.Message));
             }
             finally
             {
@@ -423,13 +424,13 @@ public sealed class AppHost : IDisposable, IFeatureContext
                 _shouldRunReturnActions = true;
             }
 
-            Log.Info("归来：离开结束，恢复任务可执行。");
+            Log.Info(Loc.T("Log.Return.Ended"));
             var snap = new IdleSnapshot(0, DateTime.UtcNow);
             foreach (var feature in _features)
             {
                 if (!feature.IsEnabled) continue;
                 try { feature.OnIdleTick(snap); }
-                catch (Exception ex) { Log.Error($"{feature.DisplayName}: {ex.Message}"); }
+                catch (Exception ex) { Log.Error(Loc.T("Log.Feature.Error", feature.DisplayName, ex.Message)); }
             }
 
             lock (_awayGate)
@@ -474,13 +475,13 @@ public sealed class AppHost : IDisposable, IFeatureContext
             }
 
             if (completeReturn)
-                Log.Info("归来：离开结束，恢复任务可执行。");
+                Log.Info(Loc.T("Log.Return.Ended"));
 
             foreach (var feature in _features)
             {
                 if (!feature.IsEnabled) continue;
                 try { feature.OnIdleTick(snapshot); }
-                catch (Exception ex) { Log.Error($"{feature.DisplayName}: {ex.Message}"); }
+                catch (Exception ex) { Log.Error(Loc.T("Log.Feature.Error", feature.DisplayName, ex.Message)); }
             }
 
             lock (_awayGate)
@@ -492,14 +493,20 @@ public sealed class AppHost : IDisposable, IFeatureContext
 
     private void OnStateChanged(AppState from, AppState to)
     {
-        Log.Info($"状态: {from} → {to}");
+        Log.Info(Loc.T("Log.State.Transition", StateLabel(from), StateLabel(to)));
         foreach (var feature in _features)
         {
             try { feature.OnStateChanged(from, to); }
-            catch (Exception ex) { Log.Error($"{feature.DisplayName}: {ex.Message}"); }
+            catch (Exception ex) { Log.Error(Loc.T("Log.Feature.Error", feature.DisplayName, ex.Message)); }
         }
         StatusChanged?.Invoke();
     }
+
+    private static string StateLabel(AppState state) => state switch
+    {
+        AppState.Watching => Loc.T("Log.State.Watching"),
+        _ => Loc.T("Log.State.Stopped")
+    };
 
     public void Dispose() => Stop();
 }

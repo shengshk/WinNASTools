@@ -1,4 +1,5 @@
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Native;
 
 namespace WinNASTools.Core.Features;
@@ -11,7 +12,7 @@ public sealed class WindowFeature : IWinNASToolsFeature
     private DateTime _hiddenAt = DateTime.MinValue;
 
     public string Id => "window";
-    public string DisplayName => "自动窗口";
+    public string DisplayName => Loc.T("Feature.Window.Display");
     public bool IsEnabled { get; set; } = true;
 
     public void Initialize(IFeatureContext context) => _ctx = context;
@@ -30,7 +31,7 @@ public sealed class WindowFeature : IWinNASToolsFeature
             && cfg.HideAfterSeconds > 0
             && idle >= cfg.HideAfterSeconds)
         {
-            _ctx.MarkAway($"空闲 {idle:N0}s");
+            _ctx.MarkAway(Loc.T("Log.Reason.Idle", idle.ToString("N0")));
             DoHide(idle);
             return;
         }
@@ -39,7 +40,7 @@ public sealed class WindowFeature : IWinNASToolsFeature
         {
             RestoreWindows();
             _isHidden = false;
-            _ctx.Log.Info("窗口：检测到活动，已恢复。");
+            _ctx.Log.Info(Loc.T("Log.Window.Restored"));
         }
     }
 
@@ -47,7 +48,7 @@ public sealed class WindowFeature : IWinNASToolsFeature
     {
         if (_ctx is null || !IsEnabled) return;
         if (_isHidden) return;
-        _ctx.MarkAway("一键离开");
+        _ctx.MarkAway(Loc.T("Log.Reason.LeaveNow"));
         DoHide(force: true);
     }
 
@@ -74,8 +75,8 @@ public sealed class WindowFeature : IWinNASToolsFeature
         HideWindows();
         _isHidden = true;
         _hiddenAt = DateTime.UtcNow;
-        var tip = force ? "一键离开" : $"空闲 {idle:N0}s";
-        _ctx?.Log.Info($"窗口：已隐藏 {_hidden.Count} 个（{tip}）。");
+        var tip = force ? Loc.T("Log.Reason.LeaveNow") : Loc.T("Log.Reason.Idle", idle.ToString("N0"));
+        _ctx?.Log.Info(Loc.T("Log.Window.Hidden", _hidden.Count, tip));
     }
 
     // 桌面与任务栏（含多屏副任务栏）的窗口类名，永远不隐藏。

@@ -1,6 +1,7 @@
 using System.Windows;
 using WinNASTools.Core;
 using WinNASTools.Core.Hosting;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.App;
 
@@ -15,6 +16,7 @@ public partial class ModulePanelWindow : Window
         InitializeComponent();
         _host = host;
         _onChanged = onChanged;
+        Loaded += (_, _) => UiLocalizer.Apply(this);
         _loading = true;
         LoadFromConfig();
         _loading = false;
@@ -71,10 +73,11 @@ public partial class ModulePanelWindow : Window
         cfg.Backup.Enabled = cfg.Modules.Backup;
 
         _host.ReloadConfig(cfg);
-        _host.Log.Info(
-            $"模块开关已更新：窗口={cfg.Modules.Window} 电源={cfg.Modules.Power} 音乐={cfg.Modules.Media} " +
-            $"浏览器={cfg.Modules.Browser} 停止应用={cfg.Modules.AppSwitch} 锁屏={cfg.Modules.Lock} 短时阻止归来={cfg.Modules.LeaveGrace} " +
-            $"打开链接={cfg.Modules.UrlLauncher} 打印机={cfg.Modules.Printer} 备份={cfg.Modules.Backup}");
+        _host.Log.Info(Loc.T(
+            "Log.Modules.Updated",
+            cfg.Modules.Window, cfg.Modules.Power, cfg.Modules.Media,
+            cfg.Modules.Browser, cfg.Modules.AppSwitch, cfg.Modules.Lock, cfg.Modules.LeaveGrace,
+            cfg.Modules.UrlLauncher, cfg.Modules.Printer, cfg.Modules.Backup));
         _onChanged();
     }
 

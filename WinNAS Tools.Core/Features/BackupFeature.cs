@@ -1,5 +1,6 @@
 using WinNASTools.Core.Backup;
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Services;
 using System.Text.Json;
 using Timer = System.Threading.Timer;
@@ -27,7 +28,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
     private static readonly TimeSpan RealtimeHostPoll = TimeSpan.FromSeconds(45);
 
     public string Id => "backup";
-    public string DisplayName => "文件备份";
+    public string DisplayName => Loc.T("Feature.Backup");
     public bool IsEnabled { get; set; } = true;
 
     /// <summary>当前展示用进度；null 表示无活动备份。</summary>
@@ -79,7 +80,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
             cur = _history.FirstOrDefault(x => x.TaskId == taskId && x.IsActive);
         var name = _ctx?.Config.Backup.Tasks.FirstOrDefault(t => t.Id == taskId)?.Name
                    ?? cur?.TaskName
-                   ?? "";
+                   ?? Loc.T("Tray.Backup.DefaultName");
         PublishProgress(new BackupProgress
         {
             RunId = cur?.RunId ?? Guid.NewGuid().ToString("N"),
@@ -254,7 +255,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
                         task.NextDueLocal = duePlan;
                         task.LastResult = $"已跳过错过的计划，下次 {duePlan:yyyy-MM-dd HH:mm}";
                         dirty = true;
-                        _ctx.Log.Info($"备份「{task.Name}」：错过计划已跳过 → 下次 {duePlan:yyyy-MM-dd HH:mm}");
+                        _ctx.Log.Info(Loc.T("Log.Backup.MissedSkipped", task.Name, duePlan.ToString("yyyy-MM-dd HH:mm")));
                     }
                     continue;
                 }
@@ -267,7 +268,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
         }
         catch (Exception ex)
         {
-            _ctx?.Log.Error($"备份调度异常: {ex.Message}");
+            _ctx?.Log.Error(Loc.T("Log.Backup.ScheduleError", ex.Message));
         }
         finally
         {
@@ -311,7 +312,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
                 w.Renamed += OnRename;
                 w.Error += (_, args) =>
                 {
-                    _ctx?.Log.Warn($"备份「{task.Name}」实时监控缓冲溢出，重建监视：{args.GetException().Message}");
+                    _ctx?.Log.Warn(Loc.T("Log.Backup.WatchOverflow", task.Name, args.GetException().Message));
                     try { RebuildRealtimeWatchers(); } catch { /* ignore */ }
                 };
                 w.EnableRaisingEvents = true;
@@ -319,7 +320,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
             }
             catch (Exception ex)
             {
-                _ctx.Log.Warn($"备份「{task.Name}」实时监控启动失败: {ex.Message}");
+                _ctx.Log.Warn(Loc.T("Log.Backup.WatchStartFailed", task.Name, ex.Message));
             }
         }
     }
@@ -355,7 +356,7 @@ public sealed class BackupFeature : IWinNASToolsFeature
                 // 运行中又有实时变更：重新入队，避免丢触发。
                 if (IsRealtime(task))
                     ArmRealtime(task.Id);
-                _ctx.Log.Warn($"备份「{task.Name}」：已在运行，跳过（已重新排队）。");
+                _ctx.Log.Warn(Loc.T("Log.Backup.AlreadyRunning", task.Name));
                 return;
             }
         }
@@ -364,12 +365,14 @@ public sealed class BackupFeature : IWinNASToolsFeature
         lock (_cancelTokens)
             _cancelTokens[task.Id] = userCts;
 
-        var trigger = manual ? "手动备份" : IsRealtime(task) ? "实时备份" : "计划备份";
+        var trigger = manual ? Loc.T("Log.Backup.Trigger.Manual")
+            : IsRealtime(task) ? Loc.T("Log.Backup.Trigger.Realtime")
+            : Loc.T("Log.Backup.Trigger.Planned");
         var runId = Guid.NewGuid().ToString("N");
         var startedAt = DateTime.Now;
         try
         {
-            _ctx.Log.Info($"备份「{task.Name}」[{trigger}]：开始");
+            _ctx.Log.Info(Loc.T("Log.Backup.Started", task.Name, trigger));
             PublishProgress(new BackupProgress
             {
                 RunId = runId,
@@ -401,13 +404,13 @@ public sealed class BackupFeature : IWinNASToolsFeature
                 var due = task.NextDueLocal ?? now;
                 task.NextDueLocal = IntervalSchedule.AdvanceAfterSuccess(
                     manual ? now : due, task.IntervalDays, task.Hour, task.Minute);
-                _ctx.Log.Info($"备份「{task.Name}」[{trigger}]完成：{result.Summary}；下次 {task.NextDueLocal:yyyy-MM-dd HH:mm}");
+                _ctx.Log.Info(Loc.T("Log.Backup.CompletedWithNext", task.Name, trigger, result.Summary, task.NextDueLocal.Value.ToString("yyyy-MM-dd HH:mm")));
             }
             else
             {
                 if (!IsLocalEndpoint(task.Source))
                     task.NextDueLocal = now.Add(RealtimeHostPoll);
-                _ctx.Log.Info($"备份「{task.Name}」[{trigger}]完成：{result.Summary}");
+                _ctx.Log.Info(Loc.T("Log.Backup.Completed", task.Name, trigger, result.Summary));
             }
             _ctx.PersistConfig();
             BackupProgress? last;
@@ -427,8 +430,8 @@ public sealed class BackupFeature : IWinNASToolsFeature
         }
         catch (OperationCanceledException)
         {
-            task.LastResult = $"[{trigger}] 已取消";
-            _ctx.Log.Warn($"备份「{task.Name}」[{trigger}]：已取消");
+            task.LastResult = $"[{trigger}] {Loc.T("Tray.Backup.Cancelled")}";
+            _ctx.Log.Warn(Loc.T("Log.Backup.Cancelled", task.Name, trigger));
             if (IsPlanned(task))
             {
                 var due = task.NextDueLocal ?? DateTime.Now;
@@ -459,11 +462,11 @@ public sealed class BackupFeature : IWinNASToolsFeature
                 var due = task.NextDueLocal ?? DateTime.Now;
                 task.NextDueLocal = IntervalSchedule.AdvanceAfterSuccess(
                     due, task.IntervalDays, task.Hour, task.Minute);
-                _ctx.Log.Error($"备份「{task.Name}」[{trigger}]失败: {ex.Message}；已改期到 {task.NextDueLocal:yyyy-MM-dd HH:mm}");
+                _ctx.Log.Error(Loc.T("Log.Backup.FailedRescheduled", task.Name, trigger, ex.Message, task.NextDueLocal.Value.ToString("yyyy-MM-dd HH:mm")));
             }
             else
             {
-                _ctx.Log.Error($"备份「{task.Name}」[{trigger}]失败: {ex.Message}");
+                _ctx.Log.Error(Loc.T("Log.Backup.Failed", task.Name, trigger, ex.Message));
             }
             _ctx.PersistConfig();
             BackupProgress? last;

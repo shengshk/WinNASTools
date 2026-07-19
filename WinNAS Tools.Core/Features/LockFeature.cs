@@ -1,4 +1,5 @@
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Native;
 
 namespace WinNASTools.Core.Features;
@@ -12,7 +13,7 @@ public sealed class LockFeature : IWinNASToolsFeature
     private bool _lockedByUs;
 
     public string Id => "lock";
-    public string DisplayName => "自动锁屏";
+    public string DisplayName => Loc.T("Feature.Lock");
     public bool IsEnabled { get; set; }
 
     public void Initialize(IFeatureContext context) => _ctx = context;
@@ -29,16 +30,18 @@ public sealed class LockFeature : IWinNASToolsFeature
         if (_ctx.IsWorkstationLocked) return;
         if (snapshot.IdleSeconds < cfg.LockAfterSeconds) return;
 
-        _ctx.MarkAway($"空闲 {snapshot.IdleSeconds:N0}s");
-        DoLock($"空闲 {snapshot.IdleSeconds:N0}s");
+        var reason = Loc.T("Log.Reason.Idle", snapshot.IdleSeconds.ToString("N0"));
+        _ctx.MarkAway(reason);
+        DoLock(reason);
     }
 
     public void ForceTrigger()
     {
         if (_ctx is null || !IsEnabled) return;
         if (_ctx.IsWorkstationLocked) return;
-        _ctx.MarkAway("一键离开");
-        DoLock("一键离开");
+        var reason = Loc.T("Log.Reason.LeaveNow");
+        _ctx.MarkAway(reason);
+        DoLock(reason);
     }
 
     public void OnStateChanged(AppState from, AppState to)
@@ -61,13 +64,13 @@ public sealed class LockFeature : IWinNASToolsFeature
         {
             if (!NativeMethods.LockWorkStation())
             {
-                _ctx.Log.Error("锁屏失败：LockWorkStation 返回 false。");
+                _ctx.Log.Error(Loc.T("Log.Lock.FailedFalse"));
                 return;
             }
 
             _lockedByUs = true;
             _ctx.MarkAway(reason);
-            _ctx.Log.Info($"锁屏：已锁定（{reason}）。");
+            _ctx.Log.Info(Loc.T("Log.Lock.Done", reason));
 
             // 尽量避免锁屏把已熄屏又弄亮：锁后再请求关屏（已灭则无害）。
             try
@@ -82,7 +85,7 @@ public sealed class LockFeature : IWinNASToolsFeature
         }
         catch (Exception ex)
         {
-            _ctx.Log.Error($"锁屏失败: {ex.Message}");
+            _ctx.Log.Error(Loc.T("Log.Lock.Failed", ex.Message));
         }
     }
 }

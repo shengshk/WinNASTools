@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
 using WinNASTools.Core;
+using WinNASTools.Core.Localization;
 using Hk = WinNASTools.Core.Services.HotkeySpec;
 
 namespace WinNASTools.App;
@@ -21,7 +22,7 @@ public partial class HotkeyEditWindow : Window
         InitializeComponent();
         if (!string.IsNullOrWhiteSpace(title))
             Title = title;
-        TxtCurrent.Text = string.IsNullOrWhiteSpace(HotkeySpec) ? "（未设置）" : HotkeySpec;
+        TxtCurrent.Text = string.IsNullOrWhiteSpace(HotkeySpec) ? Loc.T("Hotkey.NotSet") : HotkeySpec;
         BtnClear.Visibility = allowClear ? Visibility.Visible : Visibility.Collapsed;
         PreviewKeyDown += OnPreviewKeyDown;
     }
@@ -114,8 +115,8 @@ public partial class HotkeyEditWindow : Window
     private void BtnClear_Click(object sender, RoutedEventArgs e)
     {
         HotkeySpec = "";
-        TxtCurrent.Text = "（未设置）";
-        TxtHint.Text = "已清除，点确定保存";
+        TxtCurrent.Text = Loc.T("Hotkey.NotSet");
+        TxtHint.Text = Loc.T("Hotkey.ClearedHint");
     }
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
@@ -124,7 +125,7 @@ public partial class HotkeyEditWindow : Window
         {
             if (!_allowClear)
             {
-                System.Windows.MessageBox.Show("请先按下有效的快捷键组合。", AppBranding.Name,
+                System.Windows.MessageBox.Show(Loc.T("Msg.HotkeyRecordRequired"), AppBranding.Name,
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -135,7 +136,7 @@ public partial class HotkeyEditWindow : Window
 
         if (!Hk.TryParse(HotkeySpec, out _, out _, out _))
         {
-            System.Windows.MessageBox.Show("请先按下有效的快捷键组合。", AppBranding.Name,
+            System.Windows.MessageBox.Show(Loc.T("Msg.HotkeyRecordRequired"), AppBranding.Name,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

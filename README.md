@@ -1,5 +1,7 @@
 # WinNAS Tools
 
+[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
+
 - Windows 是普通人 DIY NAS 的最好系统，不服就是你对；
 - 本工具尝试根据自身使用习惯让 WinNAS 更灵活，降低待机功耗；
 - 当然日常 Windows 也可使用；
@@ -52,7 +54,8 @@
 
 ### 托盘与热键
 
-- 左键打开面板；右键：一键离开、系统设置（模块 / 热键 / 日志天数 / 开机自启等）
+- 左键打开面板；右键：一键离开、系统设置（模块 / 热键 / 日志天数 / 语言 / 开机自启等）
+- 界面与日志支持 **简体中文 / 繁體中文 / English**（默认跟随系统；切换语言后自动重启）
 - 默认热键：**Ctrl+Alt+Shift+L**（可改）
 
 ### 截图
@@ -99,6 +102,8 @@ dotnet publish ".\WinNAS Tools.App\WinNAS Tools.App.csproj" -c Release -r win-x6
 
 仓库内 `WinNasToolsConfig.example.json` 为结构参考。  
 **请勿提交**本机真实配置：其中可能含加密后的主机密码与本机路径。
+
+语言字段（`Ui.Language`）：`auto` | `zh-CN` | `zh-TW` | `en`。
 
 ## 目录
 

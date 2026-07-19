@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Native;
 
 namespace WinNASTools.Core.Features;
@@ -18,7 +19,7 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
     private int _busy;
 
     public string Id => "appswitch";
-    public string DisplayName => "自动停止应用";
+    public string DisplayName => Loc.T("Feature.AppSwitch");
     public bool IsEnabled { get; set; }
 
     public void Initialize(IFeatureContext context) => _ctx = context;
@@ -62,8 +63,9 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
                 && task.StopAfterSeconds > 0
                 && idle >= task.StopAfterSeconds)
             {
-                _ctx.MarkAway($"空闲 {idle:N0}s");
-                EvaluateStop(task, st, $"空闲 {idle:N0}s");
+                var reason = Loc.T("Log.Reason.Idle", idle.ToString("N0"));
+                _ctx.MarkAway(reason);
+                EvaluateStop(task, st, reason);
             }
         }
     }
@@ -71,13 +73,14 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
     public void ForceTrigger()
     {
         if (_ctx is null || !IsEnabled) return;
-        _ctx.MarkAway("一键离开");
+        var reason = Loc.T("Log.Reason.LeaveNow");
+        _ctx.MarkAway(reason);
         foreach (var task in _ctx.Config.AppSwitch.Tasks)
         {
             if (!task.Enabled) continue;
             var st = GetState(task.Id);
             if (st.Evaluated) continue;
-            EvaluateStop(task, st, "一键离开");
+            EvaluateStop(task, st, reason);
         }
     }
 
@@ -114,7 +117,7 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
             var names = ParseNames(task.ProcessName);
             if (names.Count == 0)
             {
-                _ctx.Log.Warn($"停止应用「{task.Name}」：未配置进程名，跳过。");
+                _ctx.Log.Warn(Loc.T("Log.AppSwitch.NoProcessName", task.Name));
                 return;
             }
 
@@ -131,13 +134,13 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
                 }
                 catch (Exception ex)
                 {
-                    _ctx.Log.Error($"停止应用「{task.Name}」：枚举 {name} 失败: {ex.Message}");
+                    _ctx.Log.Error(Loc.T("Log.AppSwitch.EnumFailed", task.Name, name, ex.Message));
                 }
             }
 
             if (processes.Count == 0)
             {
-                _ctx.Log.Info($"停止应用「{task.Name}」：目标未运行，归来不启动（{reason}）。");
+                _ctx.Log.Info(Loc.T("Log.AppSwitch.NotRunning", task.Name, reason));
                 return;
             }
 
@@ -165,13 +168,13 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
             if (closed && allRootsStopped)
             {
                 st.WeStopped = true;
-                _ctx.Log.Info($"停止应用「{task.Name}」：已停止 {processes.Count} 个关联进程（{reason}）。");
+                _ctx.Log.Info(Loc.T("Log.AppSwitch.Stopped", task.Name, processes.Count, reason));
                 if (task.RestartOnReturn && string.IsNullOrWhiteSpace(st.CapturedPath))
-                    _ctx.Log.Warn($"停止应用「{task.Name}」：未取得启动路径，归来将无法重启，请在任务中填写启动路径。");
+                    _ctx.Log.Warn(Loc.T("Log.AppSwitch.NoLaunchPath", task.Name));
             }
             else if (!allRootsStopped)
             {
-                _ctx.Log.Warn($"停止应用「{task.Name}」：仍有主进程未退出，不标记为已停止，归来不会重复启动。");
+                _ctx.Log.Warn(Loc.T("Log.AppSwitch.MainStillRunning", task.Name));
             }
 
             foreach (var p in processes.Values)
@@ -237,7 +240,7 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
             }
             catch (Exception ex)
             {
-                _ctx.Log.Warn($"停止应用「{taskName}」：强制结束 PID {process.Id} 失败: {ex.Message}");
+                _ctx.Log.Warn(Loc.T("Log.AppSwitch.ForceKillFailed", taskName, process.Id, ex.Message));
             }
         }
         return affected > 0;
@@ -248,14 +251,14 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
         if (_ctx is null) return;
         if (IsConfiguredAppRunning(task.ProcessName))
         {
-            _ctx.Log.Info($"停止应用「{task.Name}」：应用已在运行，跳过重复启动。");
+            _ctx.Log.Info(Loc.T("Log.AppSwitch.AlreadyRunning", task.Name));
             return;
         }
 
         var path = !string.IsNullOrWhiteSpace(task.LaunchPath) ? task.LaunchPath.Trim() : st.CapturedPath;
         if (string.IsNullOrWhiteSpace(path))
         {
-            _ctx.Log.Warn($"停止应用「{task.Name}」：无启动路径，跳过重启。");
+            _ctx.Log.Warn(Loc.T("Log.AppSwitch.NoPathSkipRestart", task.Name));
             return;
         }
 
@@ -275,11 +278,11 @@ public sealed class AppSwitchFeature : IWinNASToolsFeature
             catch { /* 快捷方式等无目录，忽略 */ }
 
             Process.Start(psi);
-            _ctx.Log.Info($"停止应用「{task.Name}」：检测到活动，已重新启动。");
+            _ctx.Log.Info(Loc.T("Log.AppSwitch.Restarted", task.Name));
         }
         catch (Exception ex)
         {
-            _ctx.Log.Error($"停止应用「{task.Name}」：重启失败: {ex.Message}");
+            _ctx.Log.Error(Loc.T("Log.AppSwitch.RestartFailed", task.Name, ex.Message));
         }
     }
 

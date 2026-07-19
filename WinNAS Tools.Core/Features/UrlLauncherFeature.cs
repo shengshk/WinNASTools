@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Native;
 using WinNASTools.Core.Services;
 using Timer = System.Threading.Timer;
@@ -19,7 +20,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
     private CancellationTokenSource? _disposeCts;
 
     public string Id => "url-launcher";
-    public string DisplayName => "定时打开链接";
+    public string DisplayName => Loc.T("Feature.UrlLauncher");
     public bool IsEnabled { get; set; } = true;
 
     public void Initialize(IFeatureContext context)
@@ -88,7 +89,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
         }
         catch (Exception ex)
         {
-            _ctx?.Log.Error($"定时打开链接调度异常: {ex.Message}");
+            _ctx?.Log.Error(Loc.T("Log.Url.ScheduleError", ex.Message));
         }
         finally
         {
@@ -117,7 +118,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
                     task.NextDueLocal = due;
                     task.LastResult = $"已跳过错过的计划，下次 {due:yyyy-MM-dd HH:mm}";
                     dirty = true;
-                    _ctx.Log.Info($"打开链接「{task.Name}」：错过计划已跳过 → 下次 {due:yyyy-MM-dd HH:mm}");
+                    _ctx.Log.Info(Loc.T("Log.Url.MissedSkipped", task.Name, due.ToString("yyyy-MM-dd HH:mm")));
                 }
                 continue;
             }
@@ -130,7 +131,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
                 task.NextDueLocal = IntervalSchedule.AdvanceAfterSuccess(
                     due, task.IntervalDays, task.Hour, task.Minute);
                 dirty = true;
-                _ctx.Log.Info($"打开链接「{task.Name}」：执行成功，下次 {task.NextDueLocal:yyyy-MM-dd HH:mm}");
+                _ctx.Log.Info(Loc.T("Log.Url.Success", task.Name, task.NextDueLocal.Value.ToString("yyyy-MM-dd HH:mm")));
             }
             catch (Exception ex)
             {
@@ -138,7 +139,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
                 task.NextDueLocal = IntervalSchedule.AdvanceAfterSuccess(
                     due, task.IntervalDays, task.Hour, task.Minute);
                 dirty = true;
-                _ctx.Log.Error($"打开链接「{task.Name}」失败: {ex.Message}；已改期到 {task.NextDueLocal:yyyy-MM-dd HH:mm}");
+                _ctx.Log.Error(Loc.T("Log.Url.FailedRescheduled", task.Name, ex.Message, task.NextDueLocal.Value.ToString("yyyy-MM-dd HH:mm")));
             }
         }
 
@@ -150,7 +151,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
         if (_ctx is null) return Task.CompletedTask;
         if (!Uri.TryCreate(task.Url, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            throw new InvalidOperationException("链接必须是有效的 HTTP/HTTPS 地址。");
+            throw new InvalidOperationException(Loc.T("Log.Url.InvalidUrlEx"));
 
         var configuredPath = task.BrowserPath?.Trim() ?? "";
         var browserPath = string.IsNullOrEmpty(configuredPath)
@@ -169,7 +170,7 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
         else
         {
             if (!File.Exists(configuredPath))
-                throw new FileNotFoundException("浏览器程序不存在。", configuredPath);
+                throw new FileNotFoundException(Loc.T("Msg.BrowserNotFound"), configuredPath);
             var psi = new ProcessStartInfo
             {
                 FileName = configuredPath,
@@ -190,12 +191,12 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
         }
         started?.Dispose();
 
-        _ctx.Log.Info($"打开链接「{task.Name}」：{task.Url}");
+        _ctx.Log.Info(Loc.T("Log.Url.Opening", task.Name, task.Url));
         if (task.AutoCloseBrowser)
         {
             if (string.IsNullOrWhiteSpace(processName))
             {
-                _ctx.Log.Warn($"打开链接「{task.Name}」：无法识别默认浏览器进程，跳过自动关闭。");
+                _ctx.Log.Warn(Loc.T("Log.Url.NoBrowserProcess", task.Name));
             }
             else
             {
@@ -219,12 +220,12 @@ public sealed class UrlLauncherFeature : IWinNASToolsFeature
         {
             await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken).ConfigureAwait(false);
             await CloseAllByNameAsync(processName, cancellationToken).ConfigureAwait(false);
-            _ctx?.Log.Info($"打开链接「{taskName}」：等待 {delaySeconds}s 后已关闭浏览器 {processName}。");
+            _ctx?.Log.Info(Loc.T("Log.Url.ClosedAfterWait", taskName, delaySeconds, processName));
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            _ctx?.Log.Error($"打开链接「{taskName}」自动关闭浏览器失败: {ex.Message}");
+            _ctx?.Log.Error(Loc.T("Log.Url.AutoCloseFailed", taskName, ex.Message));
         }
     }
 

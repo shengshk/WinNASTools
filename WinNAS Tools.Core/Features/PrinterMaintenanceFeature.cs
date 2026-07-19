@@ -1,4 +1,5 @@
 using WinNASTools.Core.Contracts;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Services;
 using Timer = System.Threading.Timer;
 
@@ -13,7 +14,7 @@ public sealed class PrinterMaintenanceFeature : IWinNASToolsFeature
     private bool _runningCheck;
 
     public string Id => "printer";
-    public string DisplayName => "打印机维护";
+    public string DisplayName => Loc.T("Feature.Printer");
     public bool IsEnabled { get; set; } = true;
 
     public void Initialize(IFeatureContext context)
@@ -83,7 +84,7 @@ public sealed class PrinterMaintenanceFeature : IWinNASToolsFeature
         }
         catch (Exception ex)
         {
-            _ctx?.Log.Error($"打印机维护调度异常: {ex.Message}");
+            _ctx?.Log.Error(Loc.T("Log.Printer.ScheduleError", ex.Message));
         }
         finally
         {
@@ -115,7 +116,7 @@ public sealed class PrinterMaintenanceFeature : IWinNASToolsFeature
                     task.NextDueLocal = due;
                     task.LastResult = $"已跳过错过的计划，下次 {due:yyyy-MM-dd HH:mm}";
                     dirty = true;
-                    _ctx.Log.Info($"打印机「{task.Name}」：错过计划已跳过 → 下次 {due:yyyy-MM-dd HH:mm}");
+                    _ctx.Log.Info(Loc.T("Log.Printer.MissedSkipped", task.Name, due.ToString("yyyy-MM-dd HH:mm")));
                 }
                 continue;
             }
@@ -132,7 +133,7 @@ public sealed class PrinterMaintenanceFeature : IWinNASToolsFeature
                 task.NextDueLocal = IntervalSchedule.AdvanceAfterSuccess(
                     due, task.IntervalDays, task.Hour, task.Minute);
                 dirty = true;
-                _ctx.Log.Info($"打印机「{task.Name}」：已发送打印 → {task.PrinterName}，下次 {task.NextDueLocal:yyyy-MM-dd HH:mm}");
+                _ctx.Log.Info(Loc.T("Log.Printer.Sent", task.Name, task.PrinterName, task.NextDueLocal.Value.ToString("yyyy-MM-dd HH:mm")));
             }
             catch (Exception ex)
             {
@@ -141,7 +142,7 @@ public sealed class PrinterMaintenanceFeature : IWinNASToolsFeature
                 task.NextDueLocal = IntervalSchedule.AdvanceAfterSuccess(
                     due, task.IntervalDays, task.Hour, task.Minute);
                 dirty = true;
-                _ctx.Log.Error($"打印机「{task.Name}」失败: {ex.Message}；已改期到 {task.NextDueLocal:yyyy-MM-dd HH:mm}");
+                _ctx.Log.Error(Loc.T("Log.Printer.FailedRescheduled", task.Name, ex.Message, task.NextDueLocal.Value.ToString("yyyy-MM-dd HH:mm")));
             }
         }
 

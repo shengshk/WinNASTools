@@ -5,6 +5,7 @@ using WinNASTools.Core;
 using WinNASTools.Core.Backup;
 using WinNASTools.Core.Features;
 using WinNASTools.Core.Hosting;
+using WinNASTools.Core.Localization;
 
 namespace WinNASTools.App;
 
@@ -13,6 +14,22 @@ public sealed class TrayService : IDisposable
     private readonly NotifyIcon _icon;
     private readonly AppHost _host;
     private readonly BackupFeature? _backupFeature;
+    private readonly ToolStripMenuItem _showItem;
+    private readonly ToolStripMenuItem _leaveItem;
+    private readonly ToolStripMenuItem _powerItem;
+    private readonly ToolStripMenuItem _modulesItem;
+    private readonly ToolStripMenuItem _hotkeyItem;
+    private readonly ToolStripMenuItem _logDaysItem;
+    private readonly ToolStripMenuItem _exportItem;
+    private readonly ToolStripMenuItem _importItem;
+    private readonly ToolStripMenuItem _settingsItem;
+    private readonly ToolStripMenuItem _languageItem;
+    private readonly ToolStripMenuItem _languageAutoItem;
+    private readonly ToolStripMenuItem _languageZhCnItem;
+    private readonly ToolStripMenuItem _languageZhTwItem;
+    private readonly ToolStripMenuItem _languageEnItem;
+    private readonly ToolStripMenuItem _restoreItem;
+    private readonly ToolStripMenuItem _exitItem;
     private readonly ToolStripMenuItem _toggleItem;
     private readonly ToolStripMenuItem _autostartItem;
     private readonly ToolStripMenuItem _powerPerfItem;
@@ -27,6 +44,7 @@ public sealed class TrayService : IDisposable
     private readonly Action _exportConfig;
     private readonly Action _importConfig;
     private readonly Action _refreshMainUi;
+    private readonly Action<string> _changeLanguageRestart;
     private readonly Func<string?> _exePath;
     private readonly string _defaultTip = AppBranding.Name;
     private readonly SynchronizationContext? _sync;
@@ -43,6 +61,7 @@ public sealed class TrayService : IDisposable
         Action exportConfig,
         Action importConfig,
         Action refreshMainUi,
+        Action<string> changeLanguageRestart,
         Func<string?> exePath)
     {
         _host = host;
@@ -55,6 +74,7 @@ public sealed class TrayService : IDisposable
         _exportConfig = exportConfig;
         _importConfig = importConfig;
         _refreshMainUi = refreshMainUi;
+        _changeLanguageRestart = changeLanguageRestart;
         _exePath = exePath;
         _sync = SynchronizationContext.Current;
         _backupFeature = host.Features.OfType<BackupFeature>().FirstOrDefault();
@@ -69,40 +89,55 @@ public sealed class TrayService : IDisposable
         var menu = new ContextMenuStrip();
         menu.Opening += (_, _) => RefreshMenuTexts();
 
-        var showItem = new ToolStripMenuItem("打开面板");
-        showItem.Click += (_, _) => _toggleWindow();
+        _showItem = new ToolStripMenuItem();
+        _showItem.Click += (_, _) => _toggleWindow();
 
-        var leaveItem = new ToolStripMenuItem("一键离开");
-        leaveItem.Click += (_, _) => _leaveNow();
+        _leaveItem = new ToolStripMenuItem();
+        _leaveItem.Click += (_, _) => _leaveNow();
 
-        _powerPerfItem = new ToolStripMenuItem("性能") { CheckOnClick = false };
+        _powerPerfItem = new ToolStripMenuItem { CheckOnClick = false };
         _powerPerfItem.Click += (_, _) => SetPowerMode("Performance");
-        _powerBalancedItem = new ToolStripMenuItem("平衡") { CheckOnClick = false };
+        _powerBalancedItem = new ToolStripMenuItem { CheckOnClick = false };
         _powerBalancedItem.Click += (_, _) => SetPowerMode("Balanced");
-        _powerManualItem = new ToolStripMenuItem("手动") { CheckOnClick = false };
+        _powerManualItem = new ToolStripMenuItem { CheckOnClick = false };
         _powerManualItem.Click += (_, _) => SetPowerMode("Manual");
 
-        var powerItem = new ToolStripMenuItem("电源偏好");
-        powerItem.DropDownItems.Add(_powerPerfItem);
-        powerItem.DropDownItems.Add(_powerBalancedItem);
-        powerItem.DropDownItems.Add(_powerManualItem);
+        _powerItem = new ToolStripMenuItem();
+        _powerItem.DropDownItems.Add(_powerPerfItem);
+        _powerItem.DropDownItems.Add(_powerBalancedItem);
+        _powerItem.DropDownItems.Add(_powerManualItem);
 
-        var modulesItem = new ToolStripMenuItem("模块开关");
-        modulesItem.Click += (_, _) => _openModules();
+        _modulesItem = new ToolStripMenuItem();
+        _modulesItem.Click += (_, _) => _openModules();
 
-        var hotkeyItem = new ToolStripMenuItem("离开快捷键…");
-        hotkeyItem.Click += (_, _) => _editHotkey();
+        _hotkeyItem = new ToolStripMenuItem();
+        _hotkeyItem.Click += (_, _) => _editHotkey();
 
-        var logDaysItem = new ToolStripMenuItem("日志保存天数…");
-        logDaysItem.Click += (_, _) => _editLogRetention();
+        _logDaysItem = new ToolStripMenuItem();
+        _logDaysItem.Click += (_, _) => _editLogRetention();
 
-        var exportItem = new ToolStripMenuItem("导出配置…");
-        exportItem.Click += (_, _) => _exportConfig();
+        _exportItem = new ToolStripMenuItem();
+        _exportItem.Click += (_, _) => _exportConfig();
 
-        var importItem = new ToolStripMenuItem("导入配置…");
-        importItem.Click += (_, _) => _importConfig();
+        _importItem = new ToolStripMenuItem();
+        _importItem.Click += (_, _) => _importConfig();
 
-        _autostartItem = new ToolStripMenuItem("开机自启") { CheckOnClick = false };
+        _languageAutoItem = new ToolStripMenuItem { CheckOnClick = false };
+        _languageAutoItem.Click += (_, _) => SetLanguage(AppLanguageHelper.Auto);
+        _languageZhCnItem = new ToolStripMenuItem { CheckOnClick = false };
+        _languageZhCnItem.Click += (_, _) => SetLanguage(AppLanguageHelper.ZhCn);
+        _languageZhTwItem = new ToolStripMenuItem { CheckOnClick = false };
+        _languageZhTwItem.Click += (_, _) => SetLanguage(AppLanguageHelper.ZhTw);
+        _languageEnItem = new ToolStripMenuItem { CheckOnClick = false };
+        _languageEnItem.Click += (_, _) => SetLanguage(AppLanguageHelper.En);
+
+        _languageItem = new ToolStripMenuItem();
+        _languageItem.DropDownItems.Add(_languageAutoItem);
+        _languageItem.DropDownItems.Add(_languageZhCnItem);
+        _languageItem.DropDownItems.Add(_languageZhTwItem);
+        _languageItem.DropDownItems.Add(_languageEnItem);
+
+        _autostartItem = new ToolStripMenuItem { CheckOnClick = false };
         _autostartItem.Click += (_, _) =>
         {
             var exe = _exePath();
@@ -111,21 +146,22 @@ public sealed class TrayService : IDisposable
             RefreshMenuTexts();
         };
 
-        var restoreItem = new ToolStripMenuItem("恢复默认");
-        restoreItem.Click += (_, _) => _restoreDefaults();
+        _restoreItem = new ToolStripMenuItem();
+        _restoreItem.Click += (_, _) => _restoreDefaults();
 
-        var settingsItem = new ToolStripMenuItem("系统设置");
-        settingsItem.DropDownItems.Add(modulesItem);
-        settingsItem.DropDownItems.Add(hotkeyItem);
-        settingsItem.DropDownItems.Add(logDaysItem);
-        settingsItem.DropDownItems.Add(new ToolStripSeparator());
-        settingsItem.DropDownItems.Add(exportItem);
-        settingsItem.DropDownItems.Add(importItem);
-        settingsItem.DropDownItems.Add(new ToolStripSeparator());
-        settingsItem.DropDownItems.Add(_autostartItem);
-        settingsItem.DropDownItems.Add(restoreItem);
+        _settingsItem = new ToolStripMenuItem();
+        _settingsItem.DropDownItems.Add(_modulesItem);
+        _settingsItem.DropDownItems.Add(_hotkeyItem);
+        _settingsItem.DropDownItems.Add(_logDaysItem);
+        _settingsItem.DropDownItems.Add(_languageItem);
+        _settingsItem.DropDownItems.Add(new ToolStripSeparator());
+        _settingsItem.DropDownItems.Add(_exportItem);
+        _settingsItem.DropDownItems.Add(_importItem);
+        _settingsItem.DropDownItems.Add(new ToolStripSeparator());
+        _settingsItem.DropDownItems.Add(_autostartItem);
+        _settingsItem.DropDownItems.Add(_restoreItem);
 
-        _toggleItem = new ToolStripMenuItem("停止监控");
+        _toggleItem = new ToolStripMenuItem();
         _toggleItem.Click += (_, _) =>
         {
             if (_host.IsRunning) _host.Stop();
@@ -133,18 +169,18 @@ public sealed class TrayService : IDisposable
             RefreshMenuTexts();
         };
 
-        var exitItem = new ToolStripMenuItem("退出");
-        exitItem.Click += (_, _) => exit();
+        _exitItem = new ToolStripMenuItem();
+        _exitItem.Click += (_, _) => exit();
 
-        menu.Items.Add(showItem);
-        menu.Items.Add(leaveItem);
-        menu.Items.Add(powerItem);
+        menu.Items.Add(_showItem);
+        menu.Items.Add(_leaveItem);
+        menu.Items.Add(_powerItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(settingsItem);
+        menu.Items.Add(_settingsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_toggleItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exitItem);
+        menu.Items.Add(_exitItem);
         _icon.ContextMenuStrip = menu;
 
         _icon.MouseClick += (_, e) =>
@@ -157,6 +193,14 @@ public sealed class TrayService : IDisposable
             _backupFeature.ProgressChanged += OnBackupProgressChanged;
         RefreshMenuTexts();
         RefreshTrayTip(_backupFeature?.LatestProgress);
+    }
+
+    private void SetLanguage(string languageCode)
+    {
+        var current = _host.Config.Ui.Language ?? AppLanguageHelper.Auto;
+        if (string.Equals(current, languageCode, StringComparison.OrdinalIgnoreCase))
+            return;
+        _changeLanguageRestart(languageCode);
     }
 
     private void SetPowerMode(string mode)
@@ -237,7 +281,7 @@ public sealed class TrayService : IDisposable
             }
 
             _icon.Text = entries.Count == 0
-                ? "WinNAS Tools · 暂无备份记录"
+                ? Loc.T("Tray.NoBackupHistory")
                 : string.Join(" | ", entries);
         }
         catch
@@ -249,34 +293,38 @@ public sealed class TrayService : IDisposable
     private static string FormatTrayLine(BackupProgress progress)
     {
         var name = string.IsNullOrWhiteSpace(progress.TaskName)
-            ? "备份"
+            ? Loc.T("Tray.Backup.DefaultName")
             : progress.TaskName.Trim();
         if (name.Length > 12)
             name = name[..11] + "…";
 
         return progress.Phase switch
         {
-            "Scanning" => $"{name} · 扫描中",
-            "Running" when progress.Total > 0 => $"{name} · {progress.Percent}%",
-            "Running" => $"{name} · 执行中",
-            "Cancelling" => $"{name} · 取消中",
-            _ => $"{name} · {progress.StatusText} · {(progress.EndedAtLocal ?? progress.StartedAtLocal):HH:mm}"
+            "Scanning" => Loc.T("Tray.Backup.Scanning", name),
+            "Running" when progress.Total > 0 => Loc.T("Tray.Backup.RunningPercent", name, progress.Percent),
+            "Running" => Loc.T("Tray.Backup.Running", name),
+            "Cancelling" => Loc.T("Tray.Backup.Cancelling", name),
+            _ => Loc.T("Tray.Backup.StatusLine", name, progress.StatusText, (progress.EndedAtLocal ?? progress.StartedAtLocal).ToString("HH:mm"))
         };
     }
 
     private static string FormatTrayTask(BackupTaskConfig task)
     {
-        var name = string.IsNullOrWhiteSpace(task.Name) ? "备份" : task.Name.Trim();
+        var name = string.IsNullOrWhiteSpace(task.Name) ? Loc.T("Tray.Backup.DefaultName") : task.Name.Trim();
         if (name.Length > 12)
             name = name[..11] + "…";
 
         if (task.LastRunLocal is null)
-            return $"{name} · 未运行";
+            return Loc.T("Tray.Backup.NotRun", name);
 
-        var status = task.LastResult?.Contains("已取消", StringComparison.Ordinal) == true
-            ? "已取消"
-            : "成功";
-        return $"{name} · {status} · {task.LastRunLocal:HH:mm}";
+        var cancelled = Loc.T("Tray.Backup.Cancelled");
+        var status = task.LastResult is not null
+            && (task.LastResult.Contains("已取消", StringComparison.Ordinal)
+                || task.LastResult.Contains(cancelled, StringComparison.Ordinal)
+                || task.LastResult.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+            ? cancelled
+            : Loc.T("Tray.Backup.Success");
+        return Loc.T("Tray.Backup.StatusLine", name, status, task.LastRunLocal.Value.ToString("HH:mm"));
     }
 
     private static string ClipTip(string text)
@@ -324,8 +372,35 @@ public sealed class TrayService : IDisposable
 
     private void RefreshMenuTexts()
     {
-        _toggleItem.Text = _host.IsRunning ? "停止监控" : "开始监控";
+        _showItem.Text = Loc.T("Tray.OpenPanel");
+        _leaveItem.Text = Loc.T("Tray.LeaveNow");
+        _powerItem.Text = Loc.T("Tray.PowerPreference");
+        _powerPerfItem.Text = Loc.T("Power.Performance");
+        _powerBalancedItem.Text = Loc.T("Power.Balanced");
+        _powerManualItem.Text = Loc.T("Power.Manual");
+        _modulesItem.Text = Loc.T("Tray.Modules");
+        _hotkeyItem.Text = Loc.T("Tray.LeaveHotkey");
+        _logDaysItem.Text = Loc.T("Tray.LogRetention");
+        _languageItem.Text = Loc.T("Language.Title");
+        _languageAutoItem.Text = Loc.T("Language.Auto");
+        _languageZhCnItem.Text = Loc.T("Language.ZhCn");
+        _languageZhTwItem.Text = Loc.T("Language.ZhTw");
+        _languageEnItem.Text = Loc.T("Language.En");
+        _exportItem.Text = Loc.T("Tray.ExportConfig");
+        _importItem.Text = Loc.T("Tray.ImportConfig");
+        _autostartItem.Text = Loc.T("Tray.Autostart");
+        _restoreItem.Text = Loc.T("Tray.RestoreDefaults");
+        _settingsItem.Text = Loc.T("Tray.Settings");
+        _exitItem.Text = Loc.T("Tray.Exit");
+        _toggleItem.Text = _host.IsRunning ? Loc.T("Tray.StopMonitoring") : Loc.T("Tray.StartMonitoring");
         _autostartItem.Checked = AutostartService.IsEnabled();
+
+        var lang = _host.Config.Ui.Language ?? AppLanguageHelper.Auto;
+        if (string.IsNullOrWhiteSpace(lang)) lang = AppLanguageHelper.Auto;
+        _languageAutoItem.Checked = lang.Equals(AppLanguageHelper.Auto, StringComparison.OrdinalIgnoreCase);
+        _languageZhCnItem.Checked = lang.Equals(AppLanguageHelper.ZhCn, StringComparison.OrdinalIgnoreCase);
+        _languageZhTwItem.Checked = lang.Equals(AppLanguageHelper.ZhTw, StringComparison.OrdinalIgnoreCase);
+        _languageEnItem.Checked = lang.Equals(AppLanguageHelper.En, StringComparison.OrdinalIgnoreCase);
 
         var mode = _host.Config.Power.Mode ?? "";
         _powerPerfItem.Checked = string.Equals(mode, "Performance", StringComparison.OrdinalIgnoreCase);

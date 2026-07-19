@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using WinNASTools.Core;
+using WinNASTools.Core.Localization;
 using WinNASTools.Core.Hosting;
 using WinNASTools.Core.Services;
 
@@ -143,7 +144,7 @@ public partial class HostManageWindow : Window
         PwdPass.Password = "";
         RefreshList();
         _onChanged();
-        _host.Log.Info($"主机「{h.Name}」已保存。");
+        _host.Log.Info(Loc.T("Log.Ui.HostSaved", h.Name));
     }
 
     private static AppConfig Clone(AppConfig src)
