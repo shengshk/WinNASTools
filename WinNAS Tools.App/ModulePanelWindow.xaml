@@ -1,0 +1,76 @@
+<Window x:Class="WinNASTools.App.ModulePanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="模块开关"
+        SizeToContent="Height"
+        Width="480"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Microsoft YaHei UI, Segoe UI"
+        FontSize="12"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+  <StackPanel Margin="12,10">
+    <!-- 同一套三列网格：离开/归来与定时计划竖向对齐 -->
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <TextBlock Grid.Row="0" Grid.ColumnSpan="3"
+                 Text="离开/归来" Foreground="#666666" FontSize="11" Margin="0,0,0,4"/>
+
+      <CheckBox x:Name="ChkWindow" Grid.Row="1" Grid.Column="0" Content="自动隐藏窗口"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+      <CheckBox x:Name="ChkPower" Grid.Row="1" Grid.Column="1" Content="自动电源模式"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+      <CheckBox x:Name="ChkMedia" Grid.Row="1" Grid.Column="2" Content="自动停止音乐"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+
+      <CheckBox x:Name="ChkBrowser" Grid.Row="2" Grid.Column="0" Content="自动关闭浏览器"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+      <CheckBox x:Name="ChkAppSwitch" Grid.Row="2" Grid.Column="1" Content="自动停止应用"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                ToolTip="离开时停止指定应用，归来时按需重启"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+      <CheckBox x:Name="ChkLock" Grid.Row="2" Grid.Column="2" Content="自动锁屏"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                ToolTip="空闲到点锁定工作站；解锁才算归来"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+
+      <CheckBox x:Name="ChkLeaveGrace" Grid.Row="3" Grid.Column="0" Content="离开短时阻止归来"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                ToolTip="一键离开与自动离开共用；进入离开态后一段时间内不因键鼠抖动立刻归来"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+
+      <Separator Grid.Row="4" Grid.ColumnSpan="3" Margin="0,10,0,8"/>
+
+      <TextBlock Grid.Row="5" Grid.ColumnSpan="3"
+                 Text="定时计划" Foreground="#666666" FontSize="11" Margin="0,0,0,4"/>
+
+      <CheckBox x:Name="ChkPrinter" Grid.Row="6" Grid.Column="0" Content="打印机维护"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+      <CheckBox x:Name="ChkUrlLauncher" Grid.Row="6" Grid.Column="1" Content="定时打开链接"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+      <CheckBox x:Name="ChkBackup" Grid.Row="6" Grid.Column="2" Content="文件备份"
+                HorizontalAlignment="Left" Margin="0,3" VerticalAlignment="Center"
+                Checked="Module_Changed" Unchecked="Module_Changed"/>
+    </Grid>
+  </StackPanel>
+</Window>

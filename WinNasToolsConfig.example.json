@@ -1,0 +1,69 @@
+{
+  "pollIntervalMs": 1000,
+  "modules": {
+    "window": true,
+    "power": true,
+    "media": true,
+    "browser": true,
+    "appSwitch": false,
+    "lock": true,
+    "leaveGrace": true,
+    "urlLauncher": false,
+    "printer": true,
+    "backup": true
+  },
+  "leave": {
+    "enabled": true,
+    "returnGraceSeconds": 10,
+    "hotkey": "Ctrl+Alt+Shift+L",
+    "runLeaveOnManualLock": true
+  },
+  "window": {
+    "enabled": true,
+    "hideAfterSeconds": 900
+  },
+  "power": {
+    "enabled": true,
+    "mode": "Performance",
+    "saverAfterSeconds": 180
+  },
+  "media": {
+    "enabled": true,
+    "stopAfterSeconds": 900,
+    "autoResume": true,
+    "playPauseHotkeys": [
+      "Ctrl+Alt+Up",
+      "Ctrl+Alt+P",
+      "Ctrl+Shift+P"
+    ]
+  },
+  "browser": {
+    "enabled": true,
+    "closeAfterSeconds": 1800,
+    "processNames": "chrome,msedge,firefox"
+  },
+  "lock": {
+    "enabled": false,
+    "lockAfterSeconds": 1800
+  },
+  "appSwitch": {
+    "enabled": false,
+    "tasks": []
+  },
+  "urlLauncher": {
+    "enabled": false,
+    "tasks": []
+  },
+  "printer": {
+    "enabled": true,
+    "tasks": []
+  },
+  "backup": {
+    "enabled": true,
+    "hosts": [],
+    "tasks": []
+  },
+  "logging": {
+    "retentionDays": 90
+  }
+}

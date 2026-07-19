@@ -1,0 +1,1247 @@
+<Window x:Class="WinNASTools.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WinNAS Tools"
+        Height="600" Width="520"
+        MinHeight="600"
+        MaxHeight="1500"
+        ResizeMode="CanMinimize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Visibility="Hidden"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Microsoft YaHei UI, Segoe UI"
+        FontSize="12"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+        PreviewMouseDown="Window_PreviewMouseDown">
+  <Window.Resources>
+    <!-- 按钮样式在 App.xaml；此处仅 Tab -->
+    <Style x:Key="EqualTabControl" TargetType="TabControl">
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TabControl">
+            <Grid Background="Transparent">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="4"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+              <UniformGrid x:Name="HeaderPanel" Grid.Row="0" Rows="1" IsItemsHost="True"/>
+              <Border Grid.Row="2"
+                      Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                      BorderBrush="#C0C0C0"
+                      BorderThickness="1">
+                <ContentPresenter ContentSource="SelectedContent" Margin="0"/>
+              </Border>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="TabItem">
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TabItem">
+            <Border x:Name="Bd" Background="{StaticResource FlatBtnBg}" BorderThickness="0"
+                    Padding="{TemplateBinding Padding}" Cursor="Hand">
+              <TextBlock x:Name="Title"
+                         Text="{TemplateBinding Header}"
+                         FontFamily="{TemplateBinding FontFamily}"
+                         FontSize="{TemplateBinding FontSize}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Foreground="{StaticResource FlatBtnFg}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource FlatBtnBgActive}"/>
+                <Setter TargetName="Title" Property="Foreground" Value="{StaticResource FlatBtnFgActive}"/>
+                <Setter TargetName="Title" Property="FontWeight" Value="SemiBold"/>
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource FlatBtnBgHover}"/>
+              </Trigger>
+              <MultiTrigger>
+                <MultiTrigger.Conditions>
+                  <Condition Property="IsSelected" Value="True"/>
+                  <Condition Property="IsMouseOver" Value="True"/>
+                </MultiTrigger.Conditions>
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource FlatBtnBgActive}"/>
+              </MultiTrigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Grid Grid.Row="0" Margin="16,3,16,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="140"/>
+      </Grid.RowDefinitions>
+
+    <TabControl Grid.Row="0" x:Name="MainTabs" Style="{StaticResource EqualTabControl}">
+      <!-- 离开 / 归来 -->
+      <TabItem x:Name="TabLeave" Header="离开/归来">
+        <ScrollViewer x:Name="ScrollLeave" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled"
+                      Padding="8,10,8,8" CanContentScroll="False">
+          <StackPanel>
+            <StackPanel x:Name="BlockWindow">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkWindow" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed"/>
+                <TextBlock Grid.Column="1" Text="自动隐藏窗口" VerticalAlignment="Center" Margin="8,0,8,0"
+                           ToolTip="作用：离开时最小化所有普通窗口，桌面和任务栏除外。&#x0a;工作：空闲到时或一键离开时执行；检测到键鼠活动后恢复原窗口状态。"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TxtHideAfter" Width="72" Height="23"
+                           ToolTip="空闲多久后隐藏窗口" LostFocus="Setting_LostFocus"/>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockPower">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkPower" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed"/>
+                <TextBlock x:Name="LblPower" Grid.Column="1" Text="自动电源模式" VerticalAlignment="Center" Margin="8,0,8,0"
+                           Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="power"
+                           ToolTip="作用：离开时切换到节能电源计划。&#x0a;工作：空闲到时或一键离开时执行；归来后恢复所选性能/平衡计划，手动模式不自动切换。"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TxtSaverAfter" Width="72" Height="23"
+                           ToolTip="空闲多久后切换节能" LostFocus="Setting_LostFocus"/>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                </StackPanel>
+              </Grid>
+              <Grid x:Name="RowPowerMode" Margin="24,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="电源偏好模式" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <ComboBox x:Name="CmbPowerMode" Width="72" Height="23"
+                            SelectionChanged="Setting_Changed">
+                    <ComboBoxItem Content="性能" Tag="Performance" IsSelected="True"/>
+                    <ComboBoxItem Content="平衡" Tag="Balanced"/>
+                    <ComboBoxItem Content="手动" Tag="Manual"/>
+                  </ComboBox>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"/>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockMedia">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkMedia" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed"/>
+                <TextBlock x:Name="LblMedia" Grid.Column="1" Text="自动停止音乐" VerticalAlignment="Center" Margin="8,0,8,0"
+                           Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="media"
+                           ToolTip="作用：离开时仅在检测到音频播放后阶梯暂停（系统键→自定义快捷键→静音）。&#x0a;工作：空闲到时或一键离开时执行；归来时用离开生效的同一方式恢复。"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TxtMediaStop" Width="72" Height="23"
+                           ToolTip="空闲多久后停止音乐" LostFocus="Setting_LostFocus"/>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                </StackPanel>
+              </Grid>
+              <Grid x:Name="RowMediaResume" Margin="24,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="自动恢复音乐" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <ComboBox x:Name="CmbMediaResume" Width="72" Height="23"
+                            SelectionChanged="Setting_Changed">
+                    <ComboBoxItem Content="开启" Tag="True" IsSelected="True"/>
+                    <ComboBoxItem Content="不开启" Tag="False"/>
+                  </ComboBox>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"/>
+                </StackPanel>
+              </Grid>
+              <StackPanel x:Name="RowMediaHotkeys" Margin="24,0,0,6"
+                          Focusable="True" LostFocus="RowMediaHotkeys_LostFocus">
+                <TextBlock x:Name="LblMediaHotkeys"
+                           Text="播放/暂停快捷键 （兜底控制，可留空）"
+                           Cursor="Hand"
+                           Foreground="#555555"
+                           Margin="0,0,0,4"
+                           MouseLeftButtonUp="LblMediaHotkeys_Click"
+                           ToolTip="点击展开/折叠。播放器自带的播放/暂停全局快捷键，最多 3 组；可留空。系统媒体键无效时按顺序尝试，仍无效再系统静音。"/>
+                <StackPanel x:Name="PanelMediaHotkeySlots" Visibility="Collapsed">
+                  <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <TextBlock Text="1" Width="16" Foreground="#888888" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="TxtMediaHotkey1" Text="Ctrl+Alt+Up" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Content="设置" Width="72" Height="23" Click="BtnMediaHotkey1_Click"
+                              ToolTip="录制第 1 组播放/暂停快捷键"/>
+                      <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"/>
+                    </StackPanel>
+                  </Grid>
+                  <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <TextBlock Text="2" Width="16" Foreground="#888888" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="TxtMediaHotkey2" Text="Ctrl+Alt+P" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Content="设置" Width="72" Height="23" Click="BtnMediaHotkey2_Click"
+                              ToolTip="录制第 2 组播放/暂停快捷键"/>
+                      <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"/>
+                    </StackPanel>
+                  </Grid>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <TextBlock Text="3" Width="16" Foreground="#888888" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="TxtMediaHotkey3" Text="Ctrl+Shift+P" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Content="设置" Width="72" Height="23" Click="BtnMediaHotkey3_Click"
+                              ToolTip="录制第 3 组播放/暂停快捷键"/>
+                      <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"/>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockBrowser">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkBrowser" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed"/>
+                <TextBlock x:Name="LblBrowser" Grid.Column="1" Text="自动关闭浏览器" VerticalAlignment="Center" Margin="8,0,8,0"
+                           Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="browser"
+                           ToolTip="作用：离开时关闭配置的浏览器进程。&#x0a;工作：先请求正常退出并等待，超时后强制结束；归来时不会重新启动。"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TxtBrowserClose" Width="72" Height="23"
+                           ToolTip="空闲多久后结束浏览器进程" LostFocus="Setting_LostFocus"/>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                </StackPanel>
+              </Grid>
+              <Grid x:Name="RowBrowserProcs" Margin="24,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="80"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="进程列表" VerticalAlignment="Center" ToolTip="逗号分隔，如 chrome,msedge,firefox"/>
+                <TextBox x:Name="TxtBrowserProcs" Grid.Column="1" Height="23" Margin="0,0,18,0"
+                         Style="{StaticResource OptionalTextBox}"
+                         Tag="留空：使用 chrome、msedge、firefox"
+                         VerticalAlignment="Center"
+                         LostFocus="Setting_LostFocus"/>
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockAppSwitch">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkAppSwitchModule" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="AppSwitchModule_Changed" Unchecked="AppSwitchModule_Changed"/>
+                <TextBlock x:Name="LblAppSwitch" Grid.Column="1" Text="自动停止应用" VerticalAlignment="Center" Margin="8,0,8,0"
+                           Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="appswitch"
+                           ToolTip="作用：按子任务停止指定应用。&#x0a;工作：每个任务独立倒计时；仅本程序实际停止且启用归来重启时，归来后启动。"/>
+                <Button x:Name="BtnAppSwitchSave" Grid.Column="2" Content="保存" Padding="14,0"
+                        Click="BtnAppSwitchSave_Click" IsEnabled="False" Visibility="Collapsed"/>
+              </Grid>
+
+              <StackPanel x:Name="PanelAppSwitchBody" Margin="0,0,0,6">
+                <ListBox x:Name="LstAppSwitchTasks"
+                         Margin="0,0,0,8"
+                         BorderThickness="1"
+                         Padding="0"
+                         Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.CanContentScroll="False"
+                         PreviewMouseRightButtonDown="LstAppSwitchTasks_PreviewMouseRightButtonDown"
+                         SelectionChanged="LstAppSwitchTasks_SelectionChanged">
+                  <ListBox.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="重命名" Click="MenuRenameAppSwitch_Click"/>
+                    </ContextMenu>
+                  </ListBox.ContextMenu>
+                  <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                      <Setter Property="Padding" Value="6,2"/>
+                      <Setter Property="FontSize" Value="12"/>
+                      <Setter Property="FontWeight" Value="Normal"/>
+                      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                      <Setter Property="Background" Value="Transparent"/>
+                      <Setter Property="BorderThickness" Value="0"/>
+                      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                      <Setter Property="Template">
+                        <Setter.Value>
+                          <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderThickness="0"
+                                    Padding="{TemplateBinding Padding}">
+                              <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                TextElement.FontSize="{TemplateBinding FontSize}"
+                                                TextElement.FontWeight="{TemplateBinding FontWeight}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                              <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                              </Trigger>
+                              <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E8F0F8"/>
+                              </Trigger>
+                              <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                  <Condition Property="IsSelected" Value="True"/>
+                                  <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                              </MultiTrigger>
+                            </ControlTemplate.Triggers>
+                          </ControlTemplate>
+                        </Setter.Value>
+                      </Setter>
+                    </Style>
+                  </ListBox.ItemContainerStyle>
+                </ListBox>
+
+                <Grid Margin="0,0,0,10" x:Name="PanelAppSwitchActions">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <Button Grid.Column="0" Content="新建" Click="BtnAppSwitchAdd_Click"/>
+                  <Button Grid.Column="1" Content="删除" Click="BtnAppSwitchDelete_Click"/>
+                  <Button x:Name="BtnAppSwitchPause" Grid.Column="2" Content="暂停" Click="BtnAppSwitchPause_Click"/>
+                </Grid>
+
+                <Grid x:Name="PanelAppSwitchEdit" IsEnabled="False">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="56"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+
+                  <TextBlock Grid.Row="0" Text="名称" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                  <TextBox x:Name="TxtAppName" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Height="23" Margin="0,0,0,6"
+                           TextChanged="AppSwitchDraft_Changed"/>
+
+                  <TextBlock Grid.Row="1" Text="方式" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                  <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="BtnAppModeSelect" Grid.Column="0" Content="选择应用" Margin="0,0,3,0"
+                            Click="BtnAppModeSelect_Click"
+                            ToolTip="从运行中的应用选择；路径自动带出且不可改"/>
+                    <Button x:Name="BtnAppModePath" Grid.Column="1" Content="指定路径" Margin="3,0,0,0"
+                            Click="BtnAppModePath_Click"
+                            ToolTip="以 exe 路径为账本；自动反查应用并显示运行状态"/>
+                  </Grid>
+
+                  <TextBlock Grid.Row="2" Text="应用" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                  <Grid Grid.Row="2" Grid.Column="1" Margin="0,0,0,6">
+                    <ComboBox x:Name="CmbAppProcess" Height="23"
+                              IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
+                              MaxDropDownHeight="220"
+                              ToolTip="点开下拉选择运行中的应用；输入文字可按应用名、进程名或窗口标题筛选"
+                              DropDownOpened="CmbAppProcess_DropDownOpened"
+                              SelectionChanged="CmbAppProcess_SelectionChanged">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding Display}"
+                                     MaxWidth="300"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip="{Binding FullDisplay}"/>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBox x:Name="TxtAppBound" Height="23" IsReadOnly="True"
+                             Visibility="Collapsed"
+                             ToolTip="由路径反查得到；运行中/未运行会随扫描更新"/>
+                  </Grid>
+                  <Button x:Name="BtnAppListMode" Grid.Row="2" Grid.Column="2" Content="普通" Width="56"
+                          Margin="6,0,0,6" Click="BtnAppListMode_Click"
+                          ToolTip="普通：仅有可见窗口的应用&#x0a;复杂：当前会话真实应用（含托盘/后台，排除系统进程）"/>
+
+                  <TextBlock Grid.Row="3" Text="路径" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                  <TextBox x:Name="TxtAppLaunch" Grid.Row="3" Grid.Column="1" Height="23" Margin="0,0,0,6"
+                           Style="{StaticResource OptionalTextBox}"
+                           Tag="选择模式下由应用自动带出"
+                           ToolTip="exe 完整路径；选择模式只读，指定路径模式可编辑"
+                           TextChanged="TxtAppLaunch_TextChanged"/>
+                  <Button x:Name="BtnBrowseAppLaunch" Grid.Row="3" Grid.Column="2" Content="浏览" Width="48" Margin="6,0,0,6"
+                          Click="BtnBrowseAppLaunch_Click"/>
+
+                  <TextBlock Grid.Row="4" Text="归来" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                  <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="CmbAppRestart" Width="88" Height="23" HorizontalAlignment="Left"
+                              ToolTip="归来时若上次因离开被停止，是否重新启动"
+                              SelectionChanged="AppSwitchDraft_Changed">
+                      <ComboBoxItem Content="重启" Tag="True" IsSelected="True"/>
+                      <ComboBoxItem Content="不重启" Tag="False"/>
+                    </ComboBox>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                      <TextBlock Text="空闲" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                      <TextBox x:Name="TxtAppStopAfter" Width="72" Height="23"
+                               ToolTip="空闲多久后停止；0 表示仅一键离开时停止" TextChanged="AppSwitchDraft_Changed"/>
+                      <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                    </StackPanel>
+                  </Grid>
+                </Grid>
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockLock">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkLock" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed"/>
+                <TextBlock Grid.Column="1" Text="自动锁屏" VerticalAlignment="Center" Margin="8,0,8,0"
+                           ToolTip="作用：离开时锁定工作站。&#x0a;工作：空闲到时或一键离开时执行；锁屏期间不算归来，解锁后才恢复。&#x0a;若秒数小于其它已启用离开任务，会自动抬高对齐。"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TxtLockAfter" Width="72" Height="23"
+                           ToolTip="空闲多久后锁屏" LostFocus="Setting_LostFocus"/>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockLeaveGlobal">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkRunLeaveOnManualLock" IsChecked="True" VerticalAlignment="Center"
+                          HorizontalAlignment="Left"
+                          Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                <TextBlock Grid.Column="1" Text="手动锁屏执行离开" VerticalAlignment="Center" Margin="8,0,8,0"
+                           ToolTip="Win+L 等手动锁屏时：若当前仍是正常使用，先执行一轮离开（藏窗/停音乐/节能等），再保持离开直到解锁。"/>
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="BlockLeaveGrace">
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="ChkLeaveGrace" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed"/>
+                <TextBlock Grid.Column="1" Text="离开短时阻止归来" VerticalAlignment="Center" Margin="8,0,8,0"
+                           ToolTip="作用：进入离开态后一段时间内不因键鼠抖动立刻归来。&#x0a;工作：一键离开与自动离开共用此时长；期间忽略输入，结束后仍需连续约 2 秒活动才判定归来。"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TxtReturnGrace" Width="72" Height="23"
+                           ToolTip="离开后阻止归来的秒数"
+                           LostFocus="Setting_LostFocus"/>
+                  <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- 定时计划 -->
+      <TabItem x:Name="TabSchedule" Header="定时计划">
+        <ScrollViewer x:Name="ScrollSchedule" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled"
+                      Padding="8,10,8,8" CanContentScroll="False">
+          <StackPanel>
+          <StackPanel x:Name="BlockPrinter">
+            <Grid Margin="0,0,0,6">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <CheckBox x:Name="ChkPrinterModule" IsChecked="True" VerticalAlignment="Center"
+                        Checked="PrinterModule_Changed" Unchecked="PrinterModule_Changed"/>
+              <TextBlock x:Name="LblPrinter" Grid.Column="1" Text="打印机维护" VerticalAlignment="Center" Margin="8,0,0,0"
+                         Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="printer"
+                         ToolTip="作用：定期打印测试图，维护喷头状态。&#x0a;工作：按每个任务的间隔和时刻执行，与离开/归来无关。"/>
+              <Button x:Name="BtnPrinterSave" Grid.Column="2" Content="保存" Padding="14,0"
+                      Click="BtnPrinterSave_Click" IsEnabled="False" Visibility="Collapsed"/>
+            </Grid>
+
+            <StackPanel x:Name="PanelPrinterBody" Margin="0,0,0,6">
+              <ListBox x:Name="LstPrinterTasks"
+                       Margin="0,0,0,8"
+                       BorderThickness="1"
+                       Padding="0"
+                       Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.CanContentScroll="False"
+                       PreviewMouseRightButtonDown="LstPrinterTasks_PreviewMouseRightButtonDown"
+                       SelectionChanged="LstPrinterTasks_SelectionChanged">
+                <ListBox.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="重命名" Click="MenuRenameTask_Click"/>
+                  </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemContainerStyle>
+                  <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="6,2"/>
+                    <Setter Property="FontSize" Value="12"/>
+                    <Setter Property="FontWeight" Value="Normal"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="Template">
+                      <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                          <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderThickness="0"
+                                  Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}"/>
+                          </Border>
+                          <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                              <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                              <Setter TargetName="Bd" Property="Background" Value="#E8F0F8"/>
+                            </Trigger>
+                            <MultiTrigger>
+                              <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                              </MultiTrigger.Conditions>
+                              <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                            </MultiTrigger>
+                          </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                      </Setter.Value>
+                    </Setter>
+                  </Style>
+                </ListBox.ItemContainerStyle>
+              </ListBox>
+
+              <Grid Margin="0,0,0,10" x:Name="PanelPrinterActions">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="新建" Click="BtnPrinterAdd_Click"/>
+                <Button Grid.Column="1" Content="删除" Click="BtnPrinterDelete_Click"/>
+                <Button x:Name="BtnPrinterPause" Grid.Column="2" Content="暂停" Click="BtnPrinterPause_Click"/>
+                <Button Grid.Column="3" Content="立即打印" Click="BtnPrinterPrintNow_Click"/>
+              </Grid>
+
+              <Grid x:Name="PanelPrinterEdit" IsEnabled="False">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="56"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="名称" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtPrinterName" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Height="23" Margin="0,0,0,6"
+                         TextChanged="PrinterDraft_Changed"/>
+
+                <TextBlock Grid.Row="1" Text="打印机" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="48"/>
+                  </Grid.ColumnDefinitions>
+                  <ComboBox x:Name="CmbPrinter" Height="23" Margin="0,0,6,0"
+                            IsEditable="False" SelectionChanged="PrinterDraft_Changed"/>
+                  <Button x:Name="BtnColorMode" Grid.Column="1" Width="48"
+                          Content="彩色" Tag="Color" Click="BtnColorMode_Click"
+                          ToolTip="点击切换彩色 / 灰度打印"/>
+                </Grid>
+
+                <TextBlock Grid.Row="2" Text="图片" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBox x:Name="TxtImagePath" Height="23"
+                           Style="{StaticResource OptionalTextBox}"
+                           Tag="留空：使用内置喷嘴测试图"
+                           ToolTip="留空则使用内置喷嘴测试图" TextChanged="PrinterDraft_Changed"/>
+                  <Button Grid.Column="1" Content="浏览" Width="48" Margin="6,0,0,0" Click="BtnBrowseImage_Click"/>
+                </Grid>
+
+                <TextBlock Grid.Row="3" Text="间隔" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="TxtIntervalDays" Width="40" Height="23" TextChanged="PrinterDraft_Changed"/>
+                    <TextBlock Text="天" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="时刻" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox x:Name="TxtHour" Width="32" Height="23" TextChanged="PrinterDraft_Changed"/>
+                    <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0"/>
+                    <TextBox x:Name="TxtMinute" Width="32" Height="23" TextChanged="PrinterDraft_Changed"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock Grid.Row="4" Text="下次" VerticalAlignment="Center"/>
+                <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock x:Name="TxtNextDue" VerticalAlignment="Center" Foreground="#333333"/>
+                  <TextBlock Grid.Column="1" Text="上次" VerticalAlignment="Center" Margin="12,0,6,0"/>
+                  <TextBlock x:Name="TxtLastRun" Grid.Column="2" VerticalAlignment="Center" Foreground="#333333"/>
+                </Grid>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- 定时打开链接 -->
+          <StackPanel x:Name="BlockUrlLauncher">
+            <Grid Margin="0,0,0,6">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <CheckBox x:Name="ChkUrlLauncherModule" IsChecked="True" VerticalAlignment="Center"
+                        Checked="UrlLauncherModule_Changed" Unchecked="UrlLauncherModule_Changed"/>
+              <TextBlock x:Name="LblUrlLauncher" Grid.Column="1" Text="定时打开链接" VerticalAlignment="Center" Margin="8,0,0,0"
+                         Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="url-launcher"
+                         ToolTip="作用：按计划使用指定或系统默认浏览器打开链接。&#x0a;工作：每个任务独立设置间隔和时刻；可在等待后关闭该浏览器的全部进程。"/>
+              <Button x:Name="BtnUrlSave" Grid.Column="2" Content="保存" Padding="14,0"
+                      Click="BtnUrlSave_Click" IsEnabled="False" Visibility="Collapsed"/>
+            </Grid>
+
+            <StackPanel x:Name="PanelUrlBody" Margin="0,0,0,6">
+              <ListBox x:Name="LstUrlTasks"
+                       Margin="0,0,0,8"
+                       BorderThickness="1"
+                       Padding="0"
+                       Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.CanContentScroll="False"
+                       PreviewMouseRightButtonDown="LstUrlTasks_PreviewMouseRightButtonDown"
+                       SelectionChanged="LstUrlTasks_SelectionChanged">
+                <ListBox.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="重命名" Click="MenuRenameUrl_Click"/>
+                  </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemContainerStyle>
+                  <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="6,2"/>
+                    <Setter Property="FontSize" Value="12"/>
+                    <Setter Property="FontWeight" Value="Normal"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="Template">
+                      <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                          <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderThickness="0"
+                                  Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}"/>
+                          </Border>
+                          <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                              <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                              <Setter TargetName="Bd" Property="Background" Value="#E8F0F8"/>
+                            </Trigger>
+                            <MultiTrigger>
+                              <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                              </MultiTrigger.Conditions>
+                              <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                            </MultiTrigger>
+                          </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                      </Setter.Value>
+                    </Setter>
+                  </Style>
+                </ListBox.ItemContainerStyle>
+              </ListBox>
+
+              <Grid Margin="0,0,0,10" x:Name="PanelUrlActions">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="新建" Click="BtnUrlAdd_Click"/>
+                <Button Grid.Column="1" Content="删除" Click="BtnUrlDelete_Click"/>
+                <Button x:Name="BtnUrlPause" Grid.Column="2" Content="暂停" Click="BtnUrlPause_Click"/>
+                <Button Grid.Column="3" Content="立即打开" Click="BtnUrlOpenNow_Click"/>
+              </Grid>
+
+              <Grid x:Name="PanelUrlEdit" IsEnabled="False">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="56"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="名称" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtUrlName" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Height="23" Margin="0,0,0,6"
+                         TextChanged="UrlDraft_Changed"/>
+
+                <TextBlock Grid.Row="1" Text="链接" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtUrlAddress" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Height="23" Margin="0,0,0,6"
+                         ToolTip="HTTP/HTTPS 地址" TextChanged="UrlDraft_Changed"/>
+
+                <TextBlock Grid.Row="2" Text="浏览器" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtUrlBrowserPath" Grid.Row="2" Grid.Column="1" Height="23" Margin="0,0,0,6"
+                         Style="{StaticResource OptionalTextBox}"
+                         Tag="留空：使用系统默认浏览器"
+                         ToolTip="留空则使用系统默认浏览器" TextChanged="UrlDraft_Changed"/>
+                <Button Grid.Row="2" Grid.Column="2" Content="浏览" Width="48" Margin="6,0,0,6"
+                        Click="BtnBrowseUrlBrowser_Click"/>
+
+                <TextBlock Grid.Row="3" Text="关闭" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <ComboBox x:Name="CmbUrlAutoClose" Width="88" Height="23" HorizontalAlignment="Left"
+                            SelectionChanged="UrlAutoClose_Changed">
+                    <ComboBoxItem Content="不关闭" Tag="False" IsSelected="True"/>
+                    <ComboBoxItem Content="自动关闭" Tag="True"/>
+                  </ComboBox>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="等待" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox x:Name="TxtUrlCloseDelay" Width="72" Height="23"
+                             ToolTip="打开链接后等待多久再关闭整个浏览器"
+                             TextChanged="UrlDraft_Changed"/>
+                    <TextBlock Text="秒" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="#555555"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock Grid.Row="4" Text="间隔" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="TxtUrlIntervalDays" Width="40" Height="23" TextChanged="UrlDraft_Changed"/>
+                    <TextBlock Text="天" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="时刻" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox x:Name="TxtUrlHour" Width="32" Height="23" TextChanged="UrlDraft_Changed"/>
+                    <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0"/>
+                    <TextBox x:Name="TxtUrlMinute" Width="32" Height="23" TextChanged="UrlDraft_Changed"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock Grid.Row="5" Text="下次" VerticalAlignment="Center"/>
+                <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock x:Name="TxtUrlNextDue" VerticalAlignment="Center" Foreground="#333333"/>
+                  <TextBlock Grid.Column="1" Text="上次" VerticalAlignment="Center" Margin="12,0,6,0"/>
+                  <TextBlock x:Name="TxtUrlLastRun" Grid.Column="2" VerticalAlignment="Center" Foreground="#333333"/>
+                </Grid>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- 文件备份 -->
+          <StackPanel x:Name="BlockBackup">
+            <Grid Margin="0,0,0,6">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <CheckBox x:Name="ChkBackupModule" IsChecked="True" VerticalAlignment="Center"
+                        Checked="BackupModule_Changed" Unchecked="BackupModule_Changed"/>
+              <TextBlock x:Name="LblBackup" Grid.Column="1" Text="文件备份" VerticalAlignment="Center" Margin="8,0,0,0"
+                         Cursor="Hand" MouseLeftButtonUp="MainRow_Click" Tag="backup"
+                         ToolTip="作用：按任务复制、镜像或双向同步文件。&#x0a;工作：支持计划和实时触发；按冲突、回收站与排除规则执行，与离开/归来无关。"/>
+              <Button x:Name="BtnBackupSave" Grid.Column="2" Content="保存" Padding="14,0"
+                      Click="BtnBackupSave_Click" IsEnabled="False" Visibility="Collapsed"/>
+            </Grid>
+
+            <StackPanel x:Name="PanelBackupBody">
+              <ListBox x:Name="LstBackupTasks"
+                       Margin="0,0,0,8"
+                       BorderThickness="1"
+                       Padding="0"
+                       Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       PreviewMouseRightButtonDown="LstBackupTasks_PreviewMouseRightButtonDown"
+                       SelectionChanged="LstBackupTasks_SelectionChanged">
+                <ListBox.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="重命名" Click="MenuRenameBackup_Click"/>
+                  </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemContainerStyle>
+                  <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="6,2"/>
+                    <Setter Property="FontSize" Value="12"/>
+                    <Setter Property="FontWeight" Value="Normal"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="Template">
+                      <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                          <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderThickness="0"
+                                  Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}"/>
+                          </Border>
+                          <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                              <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                              <Setter TargetName="Bd" Property="Background" Value="#E8F0F8"/>
+                            </Trigger>
+                            <MultiTrigger>
+                              <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                              </MultiTrigger.Conditions>
+                              <Setter TargetName="Bd" Property="Background" Value="#D0E4F7"/>
+                            </MultiTrigger>
+                          </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                      </Setter.Value>
+                    </Setter>
+                  </Style>
+                </ListBox.ItemContainerStyle>
+              </ListBox>
+
+              <Grid Margin="0,0,0,10" x:Name="PanelBackupActions">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="新建" Click="BtnBackupAdd_Click"/>
+                <Button Grid.Column="1" Content="删除" Click="BtnBackupDelete_Click"/>
+                <Button x:Name="BtnBackupPause" Grid.Column="2" Content="暂停" Click="BtnBackupPause_Click"/>
+                <Button x:Name="BtnBackupRunNow" Grid.Column="3" Content="立即执行" Click="BtnBackupRunNow_Click"/>
+              </Grid>
+
+              <Grid x:Name="PanelBackupEdit" IsEnabled="False">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="56"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="名称" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBox x:Name="TxtBackupName" Height="23" TextChanged="BackupDraft_Changed"/>
+                  <Button Grid.Column="1" Content="主机" Width="48" Margin="6,0,0,0"
+                          Click="BtnHostManage_Click"/>
+                </Grid>
+
+                <!-- 源 A -->
+                <TextBlock Grid.Row="1" Text="源 A" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <ComboBox x:Name="CmbBackupSrcKind" Height="23" SelectionChanged="BackupDraft_Changed"/>
+                  <ComboBox x:Name="CmbBackupSrcPath" Grid.Column="1" Height="23" Margin="6,0,0,0"
+                            IsEditable="True" IsTextSearchEnabled="False"
+                            ToolTip="本机=完整路径；主机=下拉选子目录或手填相对路径（空=根）"
+                            DropDownOpened="BackupPathCombo_DropDownOpened"
+                            SelectionChanged="BackupDraft_Changed"
+                            LostFocus="BackupDraft_Changed"/>
+                  <TextBlock x:Name="TxtBackupSrcRootHint" Grid.Column="1"
+                             Text="留空：使用主机根目录" Foreground="#888888"
+                             Margin="12,0,24,0" VerticalAlignment="Center"
+                             IsHitTestVisible="False" Visibility="Collapsed"/>
+                  <Button Grid.Column="2" Content="浏览" Width="48" Margin="6,0,0,0"
+                          Click="BtnBrowseBackupSrc_Click"/>
+                </Grid>
+
+                <!-- 目标 B -->
+                <TextBlock Grid.Row="2" Text="目标 B" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="2" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <ComboBox x:Name="CmbBackupDstKind" Height="23" SelectionChanged="BackupDraft_Changed"/>
+                  <ComboBox x:Name="CmbBackupDstPath" Grid.Column="1" Height="23" Margin="6,0,0,0"
+                            IsEditable="True" IsTextSearchEnabled="False"
+                            ToolTip="本机=完整路径；主机=下拉选子目录或手填相对路径（空=根）"
+                            DropDownOpened="BackupPathCombo_DropDownOpened"
+                            SelectionChanged="BackupDraft_Changed"
+                            LostFocus="BackupDraft_Changed"/>
+                  <TextBlock x:Name="TxtBackupDstRootHint" Grid.Column="1"
+                             Text="留空：使用主机根目录" Foreground="#888888"
+                             Margin="12,0,24,0" VerticalAlignment="Center"
+                             IsHitTestVisible="False" Visibility="Collapsed"/>
+                  <Button Grid.Column="2" Content="浏览" Width="48" Margin="6,0,0,0"
+                          Click="BtnBrowseBackupDst_Click"/>
+                </Grid>
+
+                <!-- 方式 + 冲突 -->
+                <TextBlock Grid.Row="3" Text="方式" VerticalAlignment="Center" Margin="0,0,0,6"
+                           ToolTip="复制 A→B：只把 A 有的文件拷到 B，不删 B 多余。&#x0a;镜像 A→B：先复制，再删除 B 上 A 没有的文件，使 B 与 A 一致。&#x0a;同步 A↔B：双向对齐；双方都改过时按「冲突」策略处理。"/>
+                <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                  </Grid.ColumnDefinitions>
+                  <ComboBox x:Name="CmbBackupMode" Height="23" SelectionChanged="BackupMode_Changed"
+                            ToolTip="复制 A→B：只把 A 有的文件拷到 B，不删 B 多余。&#x0a;镜像 A→B：先复制，再删除 B 上 A 没有的文件，使 B 与 A 一致。&#x0a;同步 A↔B：双向对齐；双方都改过时按「冲突」策略处理。">
+                    <ComboBoxItem Content="复制 A→B" Tag="Copy" IsSelected="True"/>
+                    <ComboBoxItem Content="镜像 A→B" Tag="Mirror"/>
+                    <ComboBoxItem Content="同步 A↔B" Tag="Sync"/>
+                  </ComboBox>
+                  <TextBlock x:Name="LblConflict" Grid.Column="1" Text="冲突" VerticalAlignment="Center" Margin="8,0,6,0"/>
+                  <ComboBox x:Name="CmbBackupConflict" Grid.Column="2" Height="23" SelectionChanged="BackupConflict_Changed"/>
+                </Grid>
+
+                <!-- 回收站 -->
+                <TextBlock x:Name="LblTrash" Grid.Row="4" Text="回收站" VerticalAlignment="Top" Margin="0,4,0,6"/>
+                <StackPanel x:Name="PanelTrashRows" Grid.Row="4" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid x:Name="RowCopyTrash">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TxtCopyTrashPath" Height="23"
+                             Style="{StaticResource OptionalTextBox}"
+                             Tag="留空：使用目标 B 同级 .syncbak"
+                             ToolTip="覆盖前旧文件移入此目录；默认 B 同级 .syncbak"
+                             TextChanged="BackupDraft_Changed"/>
+                    <Button Grid.Column="1" Content="浏览" Width="48" Margin="6,0,0,0"
+                            Click="BtnBrowseCopyTrash_Click"/>
+                  </Grid>
+                  <Grid x:Name="RowSyncTrash">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="A" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox x:Name="TxtTrashPathA" Grid.Column="1" Height="23"
+                             Style="{StaticResource OptionalTextBox}"
+                             Tag="留空：A 侧不使用回收站"
+                             ToolTip="同步：源侧回收站，留空=不设置" TextChanged="BackupDraft_Changed"/>
+                    <Button Grid.Column="2" Content="浏览" Width="48" Margin="4,0,8,0"
+                            Click="BtnBrowseTrashA_Click"/>
+                    <TextBlock Grid.Column="3" Text="B" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox x:Name="TxtTrashPathB" Grid.Column="4" Height="23"
+                             Style="{StaticResource OptionalTextBox}"
+                             Tag="留空：B 侧不使用回收站"
+                             ToolTip="同步：目标侧回收站，留空=不设置" TextChanged="BackupDraft_Changed"/>
+                    <Button Grid.Column="5" Content="浏览" Width="48" Margin="4,0,0,0"
+                            Click="BtnBrowseTrashB_Click"/>
+                  </Grid>
+                </StackPanel>
+
+                <!-- 排除 -->
+                <TextBlock Grid.Row="5" Text="排除" VerticalAlignment="Top" Margin="0,4,0,6"
+                           ToolTip="每行一条，支持：&#x0a;/文件夹名 — 排除该目录&#x0a;文件名 — 排除同名文件&#x0a;*后缀 或 *.后缀 — 按扩展名（如 *.tmp）"/>
+                <TextBox x:Name="TxtBackupExclude" Grid.Row="5" Grid.Column="1" Height="52" Margin="0,0,0,6"
+                         Style="{StaticResource OptionalTextBox}"
+                         Tag="留空：不排除任何文件"
+                         VerticalContentAlignment="Top" Padding="3,2"
+                         AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                         ToolTip="每行一条：&#x0a;/文件夹名&#x0a;文件名&#x0a;*后缀 或 *.后缀"
+                         TextChanged="BackupDraft_Changed"/>
+
+                <!-- 实时 / 计划 -->
+                <TextBlock Grid.Row="6" Text="触发" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid Grid.Row="6" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <ToggleButton x:Name="BtnScheduleRealtime" Grid.Column="0" Content="实时备份"
+                                Style="{StaticResource SegmentToggle}"
+                                Click="BtnScheduleMode_Click" Tag="Realtime"
+                                ToolTip="本机源：监视文件夹变更后约 3 秒自动备份；主机源：约每 45 秒轮询一次"/>
+                  <ToggleButton x:Name="BtnSchedulePlanned" Grid.Column="1" Content="计划备份"
+                                Style="{StaticResource SegmentToggle}" Margin="4,0,0,0"
+                                Click="BtnScheduleMode_Click" Tag="Planned"
+                                ToolTip="按间隔天数 + 时刻定时执行"/>
+                </Grid>
+
+                <!-- 间隔 / 时刻（仅计划） -->
+                <TextBlock x:Name="LblBackupInterval" Grid.Row="7" Text="间隔" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                <Grid x:Name="RowBackupSchedule" Grid.Row="7" Grid.Column="1" Margin="0,0,0,6">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="TxtBackupInterval" Width="40" Height="23" TextChanged="BackupDraft_Changed"/>
+                    <TextBlock Text="天" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="时刻" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox x:Name="TxtBackupHour" Width="32" Height="23" TextChanged="BackupDraft_Changed"/>
+                    <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0"/>
+                    <TextBox x:Name="TxtBackupMinute" Width="32" Height="23" TextChanged="BackupDraft_Changed"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock x:Name="LblBackupNext" Grid.Row="8" Text="下次" VerticalAlignment="Center"/>
+                <Grid x:Name="RowBackupNextLast" Grid.Row="8" Grid.Column="1">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock x:Name="TxtBackupNextDue" VerticalAlignment="Center" Foreground="#333333"/>
+                  <TextBlock Grid.Column="1" Text="上次" VerticalAlignment="Center" Margin="12,0,6,0"/>
+                  <TextBlock x:Name="TxtBackupLastRun" Grid.Column="2" VerticalAlignment="Center" Foreground="#333333"/>
+                </Grid>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+
+    <Grid Grid.Row="2" Margin="0,8,0,4">
+      <ToggleButton x:Name="BtnLogLevel" Content="运行日志 · 普通"
+                    Style="{StaticResource LogFilterToggle}"
+                    HorizontalAlignment="Left" Padding="10,0" IsChecked="True"
+                    Click="BtnLogLevel_Click"
+                    ToolTip="点击切换普通/错误日志"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Content="文件" Style="{StaticResource LogToolBtn}" MinWidth="48" Margin="0,0,4,0"
+                Click="BtnOpenLogFile_Click"
+                ToolTip="用系统默认程序打开完整日志文件"/>
+        <Button Content="清除" Style="{StaticResource LogToolBtn}" MinWidth="48"
+                Click="BtnClearLog_Click"
+                ToolTip="清空当前界面；之后只显示清除后产生的日志，不删除后台文件"/>
+      </StackPanel>
+    </Grid>
+
+    <ListBox x:Name="LstBackupProgress" Grid.Row="1"
+             Margin="0,6,0,0"
+             Visibility="Collapsed"
+             BorderThickness="1"
+             Padding="0"
+             Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             ScrollViewer.CanContentScroll="False">
+      <ListBox.ItemContainerStyle>
+        <Style TargetType="ListBoxItem">
+          <Setter Property="Padding" Value="0"/>
+          <Setter Property="Margin" Value="0"/>
+          <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+          <Setter Property="Focusable" Value="False"/>
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="ListBoxItem">
+                <ContentPresenter/>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </ListBox.ItemContainerStyle>
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+          <Border Height="52" BorderBrush="#E1E1E1" BorderThickness="0,0,0,1" Padding="8,5">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+              </Grid.RowDefinitions>
+              <TextBlock Text="{Binding HeaderText, Mode=OneWay}" FontSize="11"
+                         FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Grid.Row="1" Text="{Binding TimeText, Mode=OneWay}" FontSize="10"
+                         Foreground="#777777" Margin="0,2,0,0"/>
+              <Button Grid.Column="1" Grid.RowSpan="2"
+                      Content="{Binding ActionText, Mode=OneWay}"
+                      Tag="{Binding RunId, Mode=OneWay}"
+                      MinWidth="48" Margin="8,0,0,0"
+                      Style="{StaticResource LogToolBtn}"
+                      IsEnabled="{Binding ActionEnabled, Mode=OneWay}"
+                      Click="BtnBackupProgressAction_Click"/>
+              <ProgressBar Grid.Row="2" Grid.ColumnSpan="2"
+                           Height="6" Margin="0,4,0,0"
+                           Minimum="0" Maximum="100"
+                           Value="{Binding Percent, Mode=OneWay}"
+                           IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}"/>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBox x:Name="LogBox" Grid.Row="3"
+             IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+             VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
+             FontFamily="Consolas, Microsoft YaHei UI" FontSize="11"
+             VerticalContentAlignment="Top"
+             PreviewMouseWheel="LogBox_PreviewMouseWheel"
+             PreviewKeyDown="LogBox_PreviewKeyDown"
+             LostKeyboardFocus="LogBox_LostKeyboardFocus"/>
+  </Grid>
+
+    <StatusBar Grid.Row="1" Height="24"
+               Background="#EEEEEE" BorderThickness="0"
+               Padding="8,0">
+      <StatusBarItem Padding="0" HorizontalContentAlignment="Stretch"
+                     Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=StatusBar}}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock x:Name="TxtStatus" Text="状态：已停止"
+                     VerticalAlignment="Center" Foreground="#555555" FontSize="11"/>
+          <TextBlock x:Name="TxtStatusHotkey" Grid.Column="1"
+                     VerticalAlignment="Center" Foreground="#777777" FontSize="11"
+                     Margin="12,0,18,0"/>
+        </Grid>
+      </StatusBarItem>
+    </StatusBar>
+  </Grid>
+</Window>

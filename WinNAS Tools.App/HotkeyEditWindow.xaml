@@ -1,0 +1,29 @@
+<Window x:Class="WinNASTools.App.HotkeyEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="离开快捷键"
+        Height="180" Width="360"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Microsoft YaHei UI, Segoe UI"
+        FontSize="12"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <TextBlock Text="在此窗口按下新的快捷键组合：" Margin="0,0,0,8"/>
+    <TextBlock x:Name="TxtCurrent" Grid.Row="1" FontSize="16" FontWeight="SemiBold"
+               Margin="0,0,0,8" Text="Ctrl+Alt+Shift+L"/>
+    <TextBlock x:Name="TxtHint" Grid.Row="2" Foreground="#666666" TextWrapping="Wrap"
+               Text="需包含 Ctrl/Alt/Shift 之一"/>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button x:Name="BtnClear" Content="清除" Width="72" Margin="0,0,8,0" Click="BtnClear_Click" Visibility="Collapsed"/>
+      <Button Content="确定" Width="72" Margin="0,0,8,0" Click="BtnOk_Click" IsDefault="True"/>
+      <Button Content="取消" Width="72" Click="BtnCancel_Click" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

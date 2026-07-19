@@ -1,0 +1,49 @@
+# Build
+**/bin/
+**/obj/
+**/out/
+*.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+*.DotSettings.user
+
+# Publish output & local runtime data (secrets, logs, machine paths)
+/publish/
+/publish-old-*/
+**/publish/data/
+data/
+*.exe
+*.pdb
+*.dll
+!data/assets/**
+
+# Config & logs (never commit real machine config)
+**/WinNasToolsConfig.json
+**/WinNasToolsConfig.*bak*.json
+**/WinNasToolsConfig.fulltest-bak-*.json
+**/WinNasToolsConfig.night-bak-*.json
+**/winnas-tools.log
+**/crash.log
+**/backup-run-history.json
+**/backup/
+
+# Keep example config
+!WinNasToolsConfig.example.json
+!**/WinNasToolsConfig.example.json
+
+# Local diagnostics / scratch
+*diag*.ps1
+*diag*.txt
+*-bak-*.json
+idle-diag*.txt
+full-workflow-diag*.txt
+night-repro*.txt
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
