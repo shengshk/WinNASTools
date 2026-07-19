@@ -14,11 +14,11 @@
     <Product>WinNAS Tools</Product>
     <Company>WinNAS Tools</Company>
     <AssemblyTitle>WinNAS Tools</AssemblyTitle>
-    <Version>0.8.0</Version>
+    <Version>0.8.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
-  <!-- 发布(Release)时输出单文件、自包含 exe；运行时首启会把 data/ 解压到程序目录 -->
+  <!-- 发布(Release)时输出单文件、自包含 exe；运行时首启会把 data/ 解压到程序目�?-->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
