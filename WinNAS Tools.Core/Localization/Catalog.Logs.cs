@@ -29,9 +29,9 @@ public static partial class Catalog
         R("Log.Leave.ManualLockRun", "离开：手动锁屏，执行一轮离开任务。", "離開：手動鎖定，執行一輪離開任務。", "Leave: manual lock; running leave tasks.");
         R("Log.Leave.ManualLockFeatureFailed", "{0} 手动锁屏离开失败: {1}", "{0} 手動鎖定離開失敗: {1}", "{0} manual lock leave failed: {1}");
         R("Log.Leave.ManualLockFailed", "手动锁屏离开失败: {0}", "手動鎖定離開失敗: {0}", "Manual lock leave failed: {0}");
-        R("Log.Return.Unlocked", "归来：已解锁。", "歸來：已解鎖。", "Return: unlocked.");
+        R("Log.Return.ByUnlock", "归来，系统解锁。", "歸來，系統解鎖。", "Return, system unlocked.");
+        R("Log.Return.ByActivity", "归来，检测到活动。", "歸來，偵測到活動。", "Return, activity detected.");
         R("Log.Return.UnlockFailed", "解锁归来失败: {0}", "解鎖歸來失敗: {0}", "Return after unlock failed: {0}");
-        R("Log.Return.Ended", "归来：离开结束，恢复任务可执行。", "歸來：離開結束，恢復任務可執行。", "Return: away ended; restore tasks may run.");
         R("Log.Feature.Error", "{0}: {1}", "{0}: {1}", "{0}: {1}");
         R("Log.State.Transition", "状态: {0} → {1}", "狀態: {0} → {1}", "State: {0} → {1}");
         R("Log.State.Stopped", "Stopped", "Stopped", "Stopped");

@@ -382,7 +382,6 @@ public sealed class AppHost : IDisposable, IFeatureContext
         if (_features.FirstOrDefault(f => f is LockFeature) is LockFeature lockFeature)
             lockFeature.OnUnlocked();
 
-        Log.Info(Loc.T("Log.Return.Unlocked"));
         // 解锁回调也可能在 UI 线程：归来（电源切换等）放到后台，避免界面未响应。
         _ = Task.Run(() =>
         {
@@ -424,7 +423,8 @@ public sealed class AppHost : IDisposable, IFeatureContext
                 _shouldRunReturnActions = true;
             }
 
-            Log.Info(Loc.T("Log.Return.Ended"));
+            // 解锁归来只打这一句；具体恢复由各模块自己记日志。
+            Log.Info(Loc.T("Log.Return.ByUnlock"));
             var snap = new IdleSnapshot(0, DateTime.UtcNow);
             foreach (var feature in _features)
             {
@@ -475,7 +475,7 @@ public sealed class AppHost : IDisposable, IFeatureContext
             }
 
             if (completeReturn)
-                Log.Info(Loc.T("Log.Return.Ended"));
+                Log.Info(Loc.T("Log.Return.ByActivity"));
 
             foreach (var feature in _features)
             {
